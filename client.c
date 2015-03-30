@@ -6,6 +6,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <errno.h>
+#include <stdint.h>
+
 static const char* msg_help = "Usage:\n"
 "  destinations <from>\n"
 "  find <from> <to>\n"
@@ -16,14 +19,36 @@ static const char* msg_help = "Usage:\n"
 "  help\n"
 "  exit\n";
 
-static const char* msg_input = "Please input next command:";
+static const char *msg_input = "Please input next command:";
+
+Message *msgbuffer; 		// contains the message to send
+uint64_t nextmsgnum = 0;	// next message number
 
 typedef enum {
 	DESTINATIONS, FIND, SHOW, RESERVE, CANCEL, MONITOR, EXIT, HELP
 } command_t;
 
+typedef struct Message
+{
+   int id;
+   unsigned char service;
+   unsigned char *data;
+} Message;
+Message* message_new(unsigned char service) {
+	Message *msg;
+	msg = malloc(sizeof *msg);
+	if(!msg) {
+		perror("ERROR: Allocating a message struct failed\n");
+		exit(1);
+	}
+	msg.id = nextmsgnum++;
+	msg.service = service;
+	return msg;
+};
+
+
 // ugly
-command_t pick_cmd (char* cmdstr) {
+command_t pick_cmd (char *cmdstr) {
 	if (strcmp(cmdstr, "destinations") 	== 0) return DESTINATIONS;
 	if (strcmp(cmdstr, "find") 			== 0) return FIND;
 	if (strcmp(cmdstr, "show") 			== 0) return SHOW;
@@ -58,21 +83,21 @@ int main(int argc, char **argv) {
 
 	if (argc < 3) {
 		printf("Usage: client <server ip> <server port>\n");
-		return 1;
+		return 2;
 	}
 
 	char* server = argv[1]; // server ip
 	int port;				// server port
 	if (!sscanf(argv[2], "%i", &port)) {
 		perror("ERROR: Server port has to be an integer.\n");
-		return 2;
+		return 3;
 	};
 
 	printf("Welcome. Using server: %s port: %s\nConnecting...\n", argv[1], argv[2]);
 	// create socket
 	if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		perror("ERROR: can't create UDP socket.\n");
-		return 3;
+		return 4;
 	}
 
 	// bind to every local ip address, pick any port
@@ -82,7 +107,7 @@ int main(int argc, char **argv) {
 
 	if (bind(socket_fd, (struct sockaddr *)&addr_self, sizeof(addr_self)) < 0) {
 		perror("ERROR: binding local socket failed.\n");
-		return 4;
+		return 5;
 	}
 
 	// fill remote address struct
@@ -90,11 +115,8 @@ int main(int argc, char **argv) {
 	addr_remote.sin_port = htons(port);
 	if (inet_aton(server, &remaddr.sin_addr)==0) {
 		perror("ERROR: converting server IP to binary address failed, please input proper IP.\n");
-		return 5;
+		return 6;
 	}
-
-	// TODO: construct messages to send, send/receive messages
-	// TODO: add failures and tolerance
 
 	//// Command loop
 
@@ -141,6 +163,10 @@ int main(int argc, char **argv) {
 
 		if (cmd == EXIT) break;
 
+		// TODO: sending messages from queue, receiving replies
+		// TODO: outputting replies
+		// TODO: add failures and tolerance
+
 		puts(msg_input);
 	}
 
@@ -155,40 +181,97 @@ bool check_numargs(int should, int is) {
 	return true;
 }
 
+
+// TODO Message format is [int id, byte service, <data>]
+
+// service 6
 void cmd_destinations(char *from) {
+	Message *msg = message_new(6);
+	int len_from = strlen(from);
+	unsigned char *data;
+	data = malloc(sizeof(int) + len_from);
 
+	// TODO
+
+	msg.data = data;
+	msgbuffer = msg;
 }
 
+// service 1
 void cmd_find(char *from, char *to) {
+	Message *msg = message_new(1);
+	int len_from = strlen(from);
+	int len_to = strlen(to);
+	unsigned char *data;
+	data = malloc(sizeof(int)*2 + len_from + len_to);
 
+	// TODO
+
+	msg.data = data;
+	msgbuffer = msg;
 }
 
+// service 2
 void cmd_show(char *id) {
+	Message *msg = message_new(2);
+	unsigned char *data;
+	data = malloc(sizeof(int));
 
+	// TODO
+
+	msg.data = data;
+	msgbuffer = msg;
 }
 
+// service 3
 void cmd_reserve(char *id, char *num) {
 	int seats;
 	if (!sscanf(num, "%i", &seats)) {
 		perror("ERROR: Number of seats has to be an integer.\n");
 		return;
 	};
+	Message *msg = message_new(3);
+	unsigned char *data;
+	data = malloc(sizeof(int)*2);
+
+	// TODO
+
+	msg.data = data;
+	msgbuffer = msg;
 }
 
+// service 5
 void cmd_cancel(char *id, char *num) {
 	int seats;
 	if (!sscanf(num, "%i", &seats)) {
 		perror("ERROR: Number of seats has to be an integer.\n");
 		return;
 	};
+	Message *msg = message_new(5);
+	unsigned char *data;
+	data = malloc(sizeof(int)*2);
+
+	// TODO
+
+	msg.data = data;
+	msgbuffer = msg;
 }
 
+// service 4
 void cmd_monitor(char *id, char *time) {
 	int seconds;
 	if (!sscanf(time, "%i", &seconds)) {
 		perror("ERROR: Monitoring time has to be an integer (seconds).\n");
 		return;
 	};
+	Message *msg = message_new(4);
+	unsigned char *data;
+	data = malloc(sizeof(int)*2);
+
+	// TODO
+
+	msg.data = data;
+	msgbuffer = msg;
 }
 
 
