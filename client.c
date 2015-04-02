@@ -128,10 +128,18 @@ void packet_destroy(unsigned char * buffer) {
 	free(buffer);
 }
 
-void dumpbin(uint32_t n)
+void dumpint(uint32_t n)
 {
     uint32_t i;
     for (i = 1 << 31; i > 0; i = i / 2) {
+        (n & i) ? printf("1"): printf("0");
+	}
+}
+
+void dumpchar(unsigned char n)
+{
+    uint32_t i;
+    for (i = 1 << 7; i > 0; i = i / 2) {
         (n & i) ? printf("1"): printf("0");
 	}
 }
@@ -229,11 +237,12 @@ int main(int argc, char **argv) {
 				if (!check_numargs(myargc, 3)) break;
 				cmd_monitor(myargv[1], myargv[2]);
 				break;
-			case EXIT: break;
-			default: puts(msg_help);
+			case EXIT: return 0;
+			default:
+				puts(msg_help);
+				puts(msg_input);
+				continue;
 		}
-
-		if (cmd == EXIT) break;
 
 
 		// Networking
@@ -259,6 +268,7 @@ int main(int argc, char **argv) {
 			printf("Received empty response.\n");
         }
 		else {
+			printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
 			// TODO: unmarshall from recvbuffer, output replies
 		}
 
@@ -301,6 +311,10 @@ void cmd_destinations(char *from) {
 
 	msg->data = data;
 	msgbuffer = msg;
+
+	//printf("service: \n");
+	//dumpchar(msg->service);
+	//printf("\n");
 }
 
 // service 1
