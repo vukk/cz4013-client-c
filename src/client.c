@@ -32,22 +32,6 @@ static const char *msg_input = "Please input next command:";
 // declare functions
 int makeargs(char *args, int *argc, char ***aa);
 
-void dumpint(uint32_t n)
-{
-    uint32_t i;
-    for (i = 1 << 31; i > 0; i = i / 2) {
-        (n & i) ? printf("1"): printf("0");
-	}
-}
-
-void dumpchar(unsigned char n)
-{
-    uint32_t i;
-    for (i = 1 << 7; i > 0; i = i / 2) {
-        (n & i) ? printf("1"): printf("0");
-	}
-}
-
 
 static Message *request; 		// contains the message to send
 
@@ -142,7 +126,7 @@ int main(int argc, char **argv) {
 		// Networking
 
 		// send
-		printf("Sending packet...\n");
+		printf("Sending packet... to %u port %hu\n", addr_remote.sin_addr.s_addr, addr_remote.sin_port);
 		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
 			perror("ERROR: could not send packet via sendto");
 			exit(7);
