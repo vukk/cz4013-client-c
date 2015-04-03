@@ -116,7 +116,7 @@ unsigned char * packet_new(Message *msg, int *length)
 	memcpy(ptr, &(msg->id), sizeof(uint32_t));
 	ptr = ptr + sizeof(uint32_t);
 	//memcpy_s(ptr, sizeof(unsigned char), msg->id, sizeof(unsigned char));
-	memcpy(ptr, &(msg->id), sizeof(unsigned char));
+	memcpy(ptr, &(msg->service), sizeof(unsigned char));
 	ptr = ptr + sizeof(unsigned char);
 	//memcpy_s(ptr, msg->length_data, msg->data, msg->length_data);
 	memcpy(ptr, msg->data, msg->length_data);
@@ -249,14 +249,14 @@ int main(int argc, char **argv) {
 		// construct packet
 		int packet_length;
 		unsigned char *packet = packet_new(msgbuffer, &packet_length);
-		
+
 		// Print out contents of packet being sent.
 		printf("Packet size : %d  \n", packet_length);
 		printf("byte n : contents \n");
 		for(int i = 0; i < packet_length; i++){
-			printf("   %d   :    %d  \n", i,packet[i]);
+			printf("   %d   :    %d  \n", i, packet[i]);
 		}
-		
+
 		// send
 		printf("Sending packet...\n");
 		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
