@@ -10,7 +10,7 @@ typedef struct Message
 } Message;
 
 // message constructor
-Message * message_new(unsigned char service);
+Message * message_new();
 // message destructor
 void message_destroy(Message * msg);
 
@@ -19,6 +19,8 @@ void message_destroy(Message * msg);
 unsigned char * message_to_packet(Message *msg, int *length);
 // packet destructor
 void packet_destroy(unsigned char *packet);
+// for debugging, print packet as ints
+void packet_print(unsigned char *packet, int length);
 
 
 #endif

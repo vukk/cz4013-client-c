@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include <string.h>
 #include <netinet/in.h>
@@ -9,17 +11,14 @@
 
 static uint32_t nextmsgnum = 1;	// next message number
 
-Message * message_new(unsigned char service) {
-	assert(service < 8);
+Message * message_new() {
 	Message *msg;
 	msg = malloc(sizeof *msg);
 	if(!msg) {
 		perror("ERROR: Allocating a message struct failed\n");
 		exit(1);
 	}
-	msg->id = htonl(nextmsgnum++);
-	// service is always less than 8, so we don't need to care about byte order
-	msg->service = service;
+	msg->id = nextmsgnum++;
 	return msg;
 }
 
@@ -34,7 +33,9 @@ unsigned char * message_to_packet(Message *msg, int *length)
 	buffer = malloc(*length);
 	unsigned char *ptr = buffer;
 
-	memcpy(ptr, &(msg->id), sizeof(uint32_t));
+    uint32_t flightid = htonl(msg->id);
+
+	memcpy(ptr, &flightid, sizeof(uint32_t));
 	ptr = ptr + sizeof(uint32_t);
 	memcpy(ptr, &(msg->service), sizeof(unsigned char));
 	ptr = ptr + sizeof(unsigned char);
@@ -45,6 +46,14 @@ unsigned char * message_to_packet(Message *msg, int *length)
 
 void packet_destroy(unsigned char *packet) {
 	free(packet);
+}
+
+void packet_print(unsigned char *packet, int length) {
+    printf("Packet size : %d\n", length);
+    printf("byte n : contents\n");
+    for(int i = 0; i < length; i++){
+        printf("\t%d\t:\t%d\n", i, packet[i]);
+    }
 }
 
 // EOF

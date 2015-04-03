@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <sys/types.h>
@@ -9,10 +10,10 @@
 #include <arpa/inet.h>
 
 #include <errno.h>
-#include <stdint.h>
 #include <assert.h>
 
 #include "message.h"
+#include "command.h"
 
 #define RECV_BUFFER_SIZE 1000
 
@@ -28,54 +29,8 @@ static const char* msg_help = "Usage:\n"
 
 static const char *msg_input = "Please input next command:";
 
-typedef enum {
-	DESTINATIONS, FIND, SHOW, RESERVE, CANCEL, MONITOR, EXIT, HELP
-} command_t;
-
-// ugly
-command_t pick_cmd (char *cmdstr) {
-	if (strcmp(cmdstr, "destinations") 	== 0) return DESTINATIONS;
-	if (strcmp(cmdstr, "find") 			== 0) return FIND;
-	if (strcmp(cmdstr, "show") 			== 0) return SHOW;
-	if (strcmp(cmdstr, "reserve") 		== 0) return RESERVE;
-	if (strcmp(cmdstr, "cancel") 		== 0) return CANCEL;
-	if (strcmp(cmdstr, "monitor") 		== 0) return MONITOR;
-	if (strcmp(cmdstr, "exit") 			== 0) return EXIT;
-	return HELP;
-}
-
 // declare functions
 int makeargs(char *args, int *argc, char ***aa);
-bool check_numargs(int should, int is);
-void cmd_destinations(char *from);
-void cmd_find(char *from, char *to);
-void cmd_show(char *id);
-void cmd_reserve(char *id, char *num);
-void cmd_cancel(char *id, char *num);
-void cmd_monitor(char *id, char *time);
-
-
-unsigned char * pack_uint32(unsigned char *to, uint32_t intval)
-{
-  	/* assumes 8-bit char of course */
-  	to[0] = intval >> 24;
-  	to[1] = intval >> 16;
-  	to[2] = intval >> 8;
-  	to[3] = intval;
-  	return to + 4; // return pointer to where packing ended
-}
-
-// will pack the first n chars, then end with a \0
-unsigned char * pack_str(unsigned char *to, char *str, int n)
-{
-	// could memcpy...
-  	/* assumes 8-bit char of course */
-	for (int i = 0; i < n; i++) {
-		to[i] = str[i];
-	}
-	to[n] = '\0';
-  	return to + n + 1; // return pointer to where packing ended
-}
 
 void dumpint(uint32_t n)
 {
@@ -159,60 +114,37 @@ int main(int argc, char **argv) {
 		}
 		// remove newline
 		inputbuffer[strcspn(inputbuffer, "\n")] = 0;
+
 		// parse arguments
 		makeargs(inputbuffer, &myargc, &myargv);
+
+		// find out which command
 		command_t cmd = pick_cmd(myargv[0]);
+		// create request message according to command
+		cmd_result_t cmd_result = create_cmd_msg(cmd, myargc, myargv, &request);
 
-		//printf("myargc : %d input : '%s' enum : %d\n", myargc, myargv[0], cmd);
-
-		switch (cmd) {
-			case DESTINATIONS:
-				if (!check_numargs(myargc, 2)) continue;
-				cmd_destinations(myargv[1]);
-				break;
-			case FIND:
-				if (!check_numargs(myargc, 3)) continue;
-				cmd_find(myargv[1], myargv[2]);
-				break;
-			case SHOW:
-				if (!check_numargs(myargc, 2)) continue;
-				cmd_show(myargv[1]);
-				break;
-			case RESERVE:
-				if (!check_numargs(myargc, 3)) continue;
-				cmd_reserve(myargv[1], myargv[2]);
-				break;
-			case CANCEL:
-				if (!check_numargs(myargc, 3)) continue;
-				cmd_cancel(myargv[1], myargv[2]);
-				break;
-			case MONITOR:
-				if (!check_numargs(myargc, 3)) continue;
-				cmd_monitor(myargv[1], myargv[2]);
-				break;
+		switch (cmd_result) {
+			case MSG_CREATED: break;
+			case HELP: puts(msg_help); continue;
+			case ERROR: continue;
 			case EXIT: return 0;
-			default:
-				puts(msg_help);
-				continue;
+			default: perror("ERROR: internal control logic command not recognized, this should never happen.\n"); exit(7);
 		}
 
-		// Networking
 
-		// construct packet
+		// construct packet from request message
 		int packet_length;
 		unsigned char *packet = message_to_packet(request, &packet_length);
 
-		// Print out contents of packet being sent.
-		printf("Packet size : %d  \n", packet_length);
-		printf("byte n : contents \n");
-		for(int i = 0; i < packet_length; i++){
-			printf("   %d   :    %d  \n", i, packet[i]);
-		}
+		// debug: print out contents of packet being sent.
+		packet_print(packet, packet_length);
+
+		// Networking
 
 		// send
 		printf("Sending packet...\n");
 		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
-			perror("ERROR: could not send packet.\n");
+			perror("ERROR: could not send packet via sendto");
 			exit(7);
 		}
 
@@ -220,7 +152,7 @@ int main(int argc, char **argv) {
 		printf("Waiting for reply...\n");
 		int num_recv_bytes = recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len);
 		if(num_recv_bytes <= -1) {
-			perror("ERROR: could not receive.\n");
+			perror("ERROR: could not receive via recvfrom");
 		}
     	else if (num_recv_bytes == 0) {
 			printf("Received empty response.\n");
@@ -239,155 +171,6 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-
-bool check_numargs(int should, int is) {
-	if (should != is) {
-		puts(msg_help);
-		return false;
-	}
-	return true;
-}
-
-
-// TODO Message format is [int id, byte service, <data>]
-
-// service 6
-void cmd_destinations(char *from) {
-	Message *msg = message_new(6);
-	int len_from = strlen(from);
-	unsigned char *data;
-	// +1 to account for null character in the string
-	msg->length_data = sizeof(uint32_t) + len_from + 1;
-	data = malloc(msg->length_data);
-	unsigned char *ptr = data;
-
-	// pack
-	ptr = pack_uint32(ptr, htonl(len_from));
-	ptr = pack_str(ptr, from, len_from);
-
-	msg->data = data;
-	request = msg;
-}
-
-// service 1
-void cmd_find(char *from, char *to) {
-	Message *msg = message_new(1);
-	uint32_t len_from	= strlen(from);
-	uint32_t len_to 	= strlen(to);
-	unsigned char *data;
-	// +2 to account for null characters on the two strings
-	msg->length_data = sizeof(uint32_t)*2 + len_from + len_to + 2;
-	data = malloc(msg->length_data);
-	unsigned char *ptr = data;
-
-	// pack
-	ptr = pack_uint32(ptr, htonl(len_from));
-	ptr = pack_str(ptr, from, len_from);
-	ptr = pack_uint32(ptr, htonl(len_to));
-	ptr = pack_str(ptr, to, len_to);
-
-	msg->data = data;
-	request = msg;
-}
-
-// service 2
-void cmd_show(char *id) {
-	uint32_t flightid;
-	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
-		return;
-	};
-	Message *msg = message_new(2);
-	unsigned char *data;
-	msg->length_data = sizeof(uint32_t);
-	data = malloc(msg->length_data);
-	unsigned char *ptr = data;
-
-	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-
-	msg->data = data;
-	request = msg;
-}
-
-// service 3
-void cmd_reserve(char *id, char *num) {
-	uint32_t flightid;
-	uint32_t seats;
-	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
-		return;
-	};
-	if (!sscanf(num, "%i", &seats)) {
-		perror("ERROR: Number of seats has to be an integer.\n");
-		return;
-	};
-	Message *msg = message_new(3);
-	unsigned char *data;
-	msg->length_data = sizeof(uint32_t)*2;
-	data = malloc(msg->length_data);
-	unsigned char *ptr = data;
-
-	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-	ptr = pack_uint32(ptr, htonl(seats));
-
-	msg->data = data;
-	request = msg;
-}
-
-// service 5
-void cmd_cancel(char *id, char *num) {
-	uint32_t flightid;
-	uint32_t seats;
-	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
-		return;
-	};
-	if (!sscanf(num, "%i", &seats)) {
-		perror("ERROR: Number of seats has to be an integer.\n");
-		return;
-	};
-	Message *msg = message_new(5);
-	unsigned char *data;
-	msg->length_data = sizeof(uint32_t)*2;
-	data = malloc(msg->length_data);
-	unsigned char *ptr = data;
-
-	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-	ptr = pack_uint32(ptr, htonl(seats));
-
-	msg->data = data;
-	request = msg;
-}
-
-// service 4
-void cmd_monitor(char *id, char *time) {
-	uint32_t flightid;
-	uint32_t seconds;
-	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
-		return;
-	};
-	if (!sscanf(time, "%i", &seconds)) {
-		perror("ERROR: Monitoring time has to be an integer (seconds).\n");
-		return;
-	};
-	Message *msg = message_new(4);
-	unsigned char *data;
-	msg->length_data = sizeof(uint32_t)*2;
-	data = malloc(msg->length_data);
-	unsigned char *ptr = data;
-
-	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-	ptr = pack_uint32(ptr, htonl(seconds));
-
-	msg->data = data;
-	request = msg;
-}
-
 
 // the following utility function is from
 // http://stackoverflow.com/questions/1706551/parse-string-into-argv-argc

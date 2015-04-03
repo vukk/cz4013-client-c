@@ -8,10 +8,10 @@ SRCDIR=src
 
 LIBS=-Wall -W -pedantic -std=c11
 
-_DEPS = message.h
+_DEPS = marshall.h message.h command.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = message.o client.o
+_OBJ = marshall.o message.o command.o client.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)
