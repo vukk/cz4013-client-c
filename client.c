@@ -200,10 +200,14 @@ int main(int argc, char **argv) {
 
 	//// Command loop
 
-	puts(msg_input);
-
 	// exit with ^D, ^C, or typing "exit"
-	while(fgets(inputbuffer, sizeof(inputbuffer), stdin)) {
+	while(true) {
+		// output instruction for user
+		puts(msg_input);
+		// get the user input
+		if(!fgets(inputbuffer, sizeof(inputbuffer), stdin)) {
+			break;
+		}
 		// remove newline
 		inputbuffer[strcspn(inputbuffer, "\n")] = 0;
 		// parse arguments
@@ -214,33 +218,32 @@ int main(int argc, char **argv) {
 
 		switch (cmd) {
 			case DESTINATIONS:
-				if (!check_numargs(myargc, 2)) break;
+				if (!check_numargs(myargc, 2)) continue;
 				cmd_destinations(myargv[1]);
 				break;
 			case FIND:
-				if (!check_numargs(myargc, 3)) break;
+				if (!check_numargs(myargc, 3)) continue;
 				cmd_find(myargv[1], myargv[2]);
 				break;
 			case SHOW:
-				if (!check_numargs(myargc, 2)) break;
+				if (!check_numargs(myargc, 2)) continue;
 				cmd_show(myargv[1]);
 				break;
 			case RESERVE:
-				if (!check_numargs(myargc, 3)) break;
+				if (!check_numargs(myargc, 3)) continue;
 				cmd_reserve(myargv[1], myargv[2]);
 				break;
 			case CANCEL:
-				if (!check_numargs(myargc, 3)) break;
+				if (!check_numargs(myargc, 3)) continue;
 				cmd_cancel(myargv[1], myargv[2]);
 				break;
 			case MONITOR:
-				if (!check_numargs(myargc, 3)) break;
+				if (!check_numargs(myargc, 3)) continue;
 				cmd_monitor(myargv[1], myargv[2]);
 				break;
 			case EXIT: return 0;
 			default:
 				puts(msg_help);
-				puts(msg_input);
 				continue;
 		}
 
@@ -283,8 +286,6 @@ int main(int argc, char **argv) {
 		// free used memory
 		packet_destroy(packet);
 		message_destroy(msgbuffer);
-
-		puts(msg_input);
 	}
 
 	return 0;
@@ -317,10 +318,6 @@ void cmd_destinations(char *from) {
 
 	msg->data = data;
 	msgbuffer = msg;
-
-	//printf("service: \n");
-	//dumpchar(msg->service);
-	//printf("\n");
 }
 
 // service 1
