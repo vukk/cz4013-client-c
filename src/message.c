@@ -5,6 +5,8 @@
 
 #include <string.h>
 #include <netinet/in.h>
+
+#include <errno.h>
 #include <assert.h>
 
 #include "message.h"
