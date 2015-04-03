@@ -118,7 +118,7 @@ bool cmd_find(Message *msg, char *from, char *to) {
 bool cmd_show(Message *msg, char *id) {
 	uint32_t flightid;
 	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
+		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
 	unsigned char *data;
@@ -138,11 +138,11 @@ bool cmd_reserve(Message *msg, char *id, char *num) {
 	uint32_t flightid;
 	uint32_t seats;
 	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
+		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
 	if (!sscanf(num, "%i", &seats)) {
-		perror("ERROR: Number of seats has to be an integer.\n");
+		fprintf(stderr, "ERROR: Number of seats has to be an integer.\n");
 		return false;
 	};
 	unsigned char *data;
@@ -163,11 +163,11 @@ bool cmd_cancel(Message *msg, char *id, char *num) {
 	uint32_t flightid;
 	uint32_t seats;
 	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
+		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
 	if (!sscanf(num, "%i", &seats)) {
-		perror("ERROR: Number of seats has to be an integer.\n");
+		fprintf(stderr, "ERROR: Number of seats has to be an integer.\n");
 		return false;
 	};
 	unsigned char *data;
@@ -188,11 +188,11 @@ bool cmd_monitor(Message *msg, char *id, char *time) {
 	uint32_t flightid;
 	uint32_t seconds;
 	if (!sscanf(id, "%i", &flightid)) {
-		perror("ERROR: Flight ID has to be an integer.\n");
+		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
 	if (!sscanf(time, "%i", &seconds)) {
-		perror("ERROR: Monitoring time has to be an integer (seconds).\n");
+		fprintf(stderr, "ERROR: Monitoring time has to be an integer (seconds).\n");
 		return false;
 	};
 	unsigned char *data;

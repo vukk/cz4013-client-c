@@ -73,14 +73,14 @@ int main(int argc, char **argv) {
 	char* server = argv[1]; // server ip
 	int port;				// server port
 	if (!sscanf(argv[2], "%i", &port)) {
-		perror("ERROR: Server port has to be an integer.\n");
+		fprintf(stderr, "ERROR: Server port has to be an integer.\n");
 		return 3;
 	};
 
 	printf("Welcome. Using server: %s port: %s\nConnecting...\n", argv[1], argv[2]);
 	// create socket
 	if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-		perror("ERROR: can't create UDP socket.\n");
+		perror("ERROR: can't create UDP socket");
 		return 4;
 	}
 
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	addr_self.sin_port = htons(0);
 
 	if (bind(socket_fd, (struct sockaddr *)&addr_self, sizeof(addr_self)) < 0) {
-		perror("ERROR: binding local socket failed.\n");
+		perror("ERROR: binding local socket failed");
 		return 5;
 	}
 
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
 	addr_remote.sin_family = AF_INET;
 	addr_remote.sin_port = htons(port);
 	if (inet_aton(server, &addr_remote.sin_addr)==0) {
-		perror("ERROR: converting server IP to binary address failed, please input proper IP.\n");
+		perror("ERROR: converting server IP to binary address failed, please input proper IP");
 		return 6;
 	}
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 			case HELP: puts(msg_help); continue;
 			case ERROR: continue;
 			case EXIT: return 0;
-			default: perror("ERROR: internal control logic command not recognized, this should never happen.\n"); exit(7);
+			default: fprintf(stderr, "ERROR: internal control logic command not recognized, this should never happen.\n"); exit(7);
 		}
 
 
