@@ -31,7 +31,7 @@ typedef enum {
 } command_t;
 
 
-static uint32_t nextmsgnum = 0;	// next message number
+static uint32_t nextmsgnum = 1;	// next message number
 
 typedef struct Message
 {
@@ -244,13 +244,19 @@ int main(int argc, char **argv) {
 				continue;
 		}
 
-
 		// Networking
 
 		// construct packet
 		int packet_length;
 		unsigned char *packet = packet_new(msgbuffer, &packet_length);
-
+		
+		// Print out contents of packet being sent.
+		printf("Packet size : %d  \n", packet_length);
+		printf("byte n : contents \n");
+		for(int i = 0; i < packet_length; i++){
+			printf("   %d   :    %d  \n", i,packet[i]);
+		}
+		
 		// send
 		printf("Sending packet...\n");
 		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
