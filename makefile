@@ -1,18 +1,26 @@
-# the compiler: gcc for C program, define as g++ for C++
-CC = clang
+IDIR=include
+CC=clang
+CFLAGS=-I$(IDIR)
 
-# compiler flags:
-#  -g    adds debugging information to the executable file
-#  -Wall turns on most, but not all, compiler warnings
-CFLAGS  = -Wall -W -pedantic -std=c11
+ODIR=obj
+LDIR=lib
+SRCDIR=src
 
-# the build target executable:
-TARGET = client
+LIBS=-Wall -W -pedantic -std=c11
 
-all: $(TARGET)
+_DEPS = message.h
+DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-$(TARGET): $(TARGET).c
-	$(CC) $(CFLAGS) -o $(TARGET) $(TARGET).c
+_OBJ = message.o client.o
+OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+
+$(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+client: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+.PHONY: clean
 
 clean:
-	$(RM) $(TARGET)
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~

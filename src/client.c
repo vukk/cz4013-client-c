@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include "message.h"
+
 #define RECV_BUFFER_SIZE 1000
 
 static const char* msg_help = "Usage:\n"
@@ -29,36 +31,6 @@ static const char *msg_input = "Please input next command:";
 typedef enum {
 	DESTINATIONS, FIND, SHOW, RESERVE, CANCEL, MONITOR, EXIT, HELP
 } command_t;
-
-
-static uint32_t nextmsgnum = 1;	// next message number
-
-typedef struct Message
-{
-   uint32_t id;
-   unsigned char service;
-   unsigned char *data;
-   int length_data;
-} Message;
-
-Message * message_new(unsigned char service) {
-	assert(service < 8);
-	Message *msg;
-	msg = malloc(sizeof *msg);
-	if(!msg) {
-		perror("ERROR: Allocating a message struct failed\n");
-		exit(1);
-	}
-	msg->id = htonl(nextmsgnum++);
-	// service is always less than 8, so we don't need to care about byte order
-	msg->service = service;
-	return msg;
-}
-
-void message_destroy(Message * msg) {
-	free(msg->data);
-}
-
 
 // ugly
 command_t pick_cmd (char *cmdstr) {
@@ -105,29 +77,6 @@ unsigned char * pack_str(unsigned char *to, char *str, int n)
   	return to + n + 1; // return pointer to where packing ended
 }
 
-unsigned char * packet_new(Message *msg, int *length)
-{
-	unsigned char *buffer;
-	*length = sizeof(uint32_t) + sizeof(unsigned char) + msg->length_data;
-	buffer = malloc(*length);
-	unsigned char *ptr = buffer;
-
-	//memcpy_s(ptr, sizeof(uint32_t), msg->id, sizeof(uint32_t));
-	memcpy(ptr, &(msg->id), sizeof(uint32_t));
-	ptr = ptr + sizeof(uint32_t);
-	//memcpy_s(ptr, sizeof(unsigned char), msg->id, sizeof(unsigned char));
-	memcpy(ptr, &(msg->service), sizeof(unsigned char));
-	ptr = ptr + sizeof(unsigned char);
-	//memcpy_s(ptr, msg->length_data, msg->data, msg->length_data);
-	memcpy(ptr, msg->data, msg->length_data);
-
-	return buffer;
-}
-
-void packet_destroy(unsigned char * buffer) {
-	free(buffer);
-}
-
 void dumpint(uint32_t n)
 {
     uint32_t i;
@@ -145,7 +94,7 @@ void dumpchar(unsigned char n)
 }
 
 
-static Message *msgbuffer; 		// contains the message to send
+static Message *request; 		// contains the message to send
 
 
 int main(int argc, char **argv) {
@@ -251,7 +200,7 @@ int main(int argc, char **argv) {
 
 		// construct packet
 		int packet_length;
-		unsigned char *packet = packet_new(msgbuffer, &packet_length);
+		unsigned char *packet = message_to_packet(request, &packet_length);
 
 		// Print out contents of packet being sent.
 		printf("Packet size : %d  \n", packet_length);
@@ -285,7 +234,7 @@ int main(int argc, char **argv) {
 
 		// free used memory
 		packet_destroy(packet);
-		message_destroy(msgbuffer);
+		message_destroy(request);
 	}
 
 	return 0;
@@ -317,7 +266,7 @@ void cmd_destinations(char *from) {
 	ptr = pack_str(ptr, from, len_from);
 
 	msg->data = data;
-	msgbuffer = msg;
+	request = msg;
 }
 
 // service 1
@@ -338,7 +287,7 @@ void cmd_find(char *from, char *to) {
 	ptr = pack_str(ptr, to, len_to);
 
 	msg->data = data;
-	msgbuffer = msg;
+	request = msg;
 }
 
 // service 2
@@ -358,7 +307,7 @@ void cmd_show(char *id) {
 	ptr = pack_uint32(ptr, htonl(flightid));
 
 	msg->data = data;
-	msgbuffer = msg;
+	request = msg;
 }
 
 // service 3
@@ -384,7 +333,7 @@ void cmd_reserve(char *id, char *num) {
 	ptr = pack_uint32(ptr, htonl(seats));
 
 	msg->data = data;
-	msgbuffer = msg;
+	request = msg;
 }
 
 // service 5
@@ -410,7 +359,7 @@ void cmd_cancel(char *id, char *num) {
 	ptr = pack_uint32(ptr, htonl(seats));
 
 	msg->data = data;
-	msgbuffer = msg;
+	request = msg;
 }
 
 // service 4
@@ -436,7 +385,7 @@ void cmd_monitor(char *id, char *time) {
 	ptr = pack_uint32(ptr, htonl(seconds));
 
 	msg->data = data;
-	msgbuffer = msg;
+	request = msg;
 }
 
 
