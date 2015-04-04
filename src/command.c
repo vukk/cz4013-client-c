@@ -88,7 +88,7 @@ bool cmd_destinations(Message *msg, char *from) {
 	unsigned char *ptr = data;
 
 	// pack
-	ptr = pack_uint32(ptr, htonl(len_from));
+	ptr = pack_int32(ptr, len_from);
 	ptr = pack_str(ptr, from, len_from);
 
 	msg->data = data;
@@ -106,9 +106,9 @@ bool cmd_find(Message *msg, char *from, char *to) {
 	unsigned char *ptr = data;
 
 	// pack
-	ptr = pack_uint32(ptr, htonl(len_from));
+	ptr = pack_int32(ptr, len_from);
 	ptr = pack_str(ptr, from, len_from);
-	ptr = pack_uint32(ptr, htonl(len_to));
+	ptr = pack_int32(ptr, len_to);
 	ptr = pack_str(ptr, to, len_to);
 
 	msg->data = data;
@@ -128,7 +128,7 @@ bool cmd_show(Message *msg, char *id) {
 	unsigned char *ptr = data;
 
 	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
+	ptr = pack_int32(ptr, flightid);
 
 	msg->data = data;
 	return true;
@@ -152,8 +152,8 @@ bool cmd_reserve(Message *msg, char *id, char *num) {
 	unsigned char *ptr = data;
 
 	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-	ptr = pack_uint32(ptr, htonl(seats));
+	ptr = pack_int32(ptr, flightid);
+	ptr = pack_int32(ptr, seats);
 
 	msg->data = data;
 	return true;
@@ -177,8 +177,8 @@ bool cmd_cancel(Message *msg, char *id, char *num) {
 	unsigned char *ptr = data;
 
 	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-	ptr = pack_uint32(ptr, htonl(seats));
+	ptr = pack_int32(ptr, flightid);
+	ptr = pack_int32(ptr, seats);
 
 	msg->data = data;
 	return true;
@@ -202,8 +202,8 @@ bool cmd_monitor(Message *msg, char *id, char *time) {
 	unsigned char *ptr = data;
 
 	// pack
-	ptr = pack_uint32(ptr, htonl(flightid));
-	ptr = pack_uint32(ptr, htonl(seconds));
+	ptr = pack_int32(ptr, flightid);
+	ptr = pack_int32(ptr, seconds);
 
 	msg->data = data;
 	return true;

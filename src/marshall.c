@@ -6,7 +6,7 @@
 #include <string.h>
 #include <netinet/in.h>
 
-float unpack_float(unsigned char *value) {
+float unpack_float(unsigned char **value) {
     union floatint32 {
         float   f;
         int32_t i;
@@ -15,11 +15,21 @@ float unpack_float(unsigned char *value) {
     union floatint32 result;
     memcpy(&(result.i), value, sizeof(int32_t));
     result.i = htonl(result.i);
+    *value += sizeof(int32_t);
     return result.f;
 }
 
-unsigned char * pack_uint32(unsigned char *to, int32_t intval)
+int32_t unpack_int32(unsigned char **value) {
+    int32_t result;
+    memcpy(&result, value, sizeof(int32_t));
+    result = htonl(result);
+    *value += sizeof(int32_t);
+    return result;
+}
+
+unsigned char * pack_int32(unsigned char *to, int32_t intval)
 {
+    intval = htonl(intval);
     memcpy(to, &intval, sizeof(int32_t));
     return to + sizeof(int32_t);
 }
