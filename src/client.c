@@ -196,7 +196,15 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	// Figure out response ID and type
 	int32_t id;
 	unsigned int type;
-
+	char* ptr = recvbuffer;
+	
+	id = unpack_int32(&ptr);
+	type = *ptr;
+	ptr++;
+	
+	printf("Got reply for id %u service: %d\n", (uint32_t) id, type);
+	
+/*
 	for ( int i = 0; i < 5; i++ ) {
 		if (i < 4) {
 			id = id << 8;
@@ -205,7 +213,7 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		else if (i == 4) {
 			type = recvbuffer[i];
 		}
-	}
+	}*/
 
 	if (id != request->id || type != request->service) {
 		printf("Got reply that didn't match our request. Ignoring it.\n");
@@ -216,7 +224,16 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		printf("Got reply for service: %d - not yet implemented.\n", type);
 		
 		packet_print((unsigned char*) recvbuffer, 1000);
-	}
+		
+		int32_t amount = unpack_int32(&ptr);
+		char *tmp = (char *) &amount;
+		printf("%d %d %d %d\n", tmp[0], tmp[1], tmp[2], tmp[3]);
+		
+		printf("lentoja : %d oikeita lentoja: %d \n", amount, recvbuffer[8]);
+
+
+//     int32_t unpack_int32(char **value) {
+		}
 
 	// Service type : 2
 	if (type == 2) {
