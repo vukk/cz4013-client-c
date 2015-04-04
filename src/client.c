@@ -203,7 +203,6 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 
 	// else: we received a packet fine
 
-	printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
 	// TODO: unmarshall from recvbuffer, output replies
 
 	printf("\n");
@@ -217,56 +216,84 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	type = *ptr;
 	ptr++;
 
-	printf("Got reply for id %u service: %d\n", (uint32_t) id, type);
-
 	if (id != request->id || type != request->service) {
 		printf("Got reply that didn't match our request. Ignoring it.\n");
 		return false;
 	}
 
+	// Service 1 ::
+	// find <source> <destination>
 	if (type == 1) {
-		printf("Got reply for service: %d - not yet implemented.\n", type);
-
-		packet_print((unsigned char*) recvbuffer, num_recv_bytes);
 
 		int32_t amount = unpack_int32(&ptr);
-		char *tmp = (char *) &amount;
-		printf("%d %d %d %d\n", tmp[0], tmp[1], tmp[2], tmp[3]);
-
-		printf("lentoja : %d oikeita lentoja: %d \n", amount, recvbuffer[8]);
-
+		int32_t flights[amount];
+		
+		if 		  (amount == 0 ) printf("No Route found flying from source to destination.\n");
+		else if (amount == -1) printf("Source airport not recognised.\n");
+		else if (amount == -2) printf("Destination airport not recognised.\n");
+		else if (amount == -3) printf("Both source and destination airports not recognised.\n");
+		else if (amount < -3  ) printf("Impossible error occurred.");
+		else {
+			printf("Flights : %d\n", amount);
+			for (int i = 0; i < amount; i++ ) {
+				flights[i] = unpack_int32(&ptr);
+				printf(" - ID: %d\n", flights[i]);
+			}
+			printf("\n");
+		}
+		
 		}
 
-	// Service type : 2
+	// Service  2 ::
+	// show <id>
 	if (type == 2) {
 
 		int32_t seats;
-		char year[5];
-		char month[3];
-		char day[3];
-		char hour[3];
-		char minute[3];
-
 		seats = unpack_int32(&ptr);
 
-		unpack_str(&ptr, year, 4);
-		unpack_str(&ptr, month, 2);
-		unpack_str(&ptr, day, 2);
-		unpack_str(&ptr, hour, 2);
-		unpack_str(&ptr, minute, 2);
+		if (seats < 0) printf("Requested flight not found.\n");
+		else {
+			char year[5];
+			char month[3];
+			char day[3];
+			char hour[3];
+			char minute[3];
 
-		float fare = unpack_float(&ptr);
-		printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
-		printf("\n\n");
+			unpack_str(&ptr, year, 4);
+			unpack_str(&ptr, month, 2);
+			unpack_str(&ptr, day, 2);
+			unpack_str(&ptr, hour, 2);
+			unpack_str(&ptr, minute, 2);
+
+			float fare = unpack_float(&ptr);
+			printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
+			printf("\n\n");
+		}
 
 	}
 
 
+	// Service  3 ::
+	// reserve <id> <tickets>
 	if (type == 3) {
-		printf("Got reply for service: %d - not yet implemented.\n", type);
+		
+		int32_t reserved  = unpack_int32(&ptr);
+		
+		if 		  (reserved > 0)   printf("Congratulations! You reserved %d tickets for the flight.\n", reserved);
+		else if (reserved == 0) printf("Sorry! This flight is sold out.\n");
+		else 						     printf("Requested flight not found.\n");
+		
 	}
+	
+	// Service 4 ::
+	// monitor <flight id> <time>
 	if (type == 4) {
-		printf("Got reply for service: %d - not yet implemented.\n", type);
+	
+		int32_t availability = unpack_int32(&ptr);
+		
+		if (availability >= 0) printf("Update: There are %d seats available on the flight.\n", availability);
+		else 				       printf("Requested flight not found.\n");
+	
 	}
 	if (type == 5) {
 		printf("Got reply for service: %d - not yet implemented.\n", type);
