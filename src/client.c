@@ -214,6 +214,8 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 
 	if (type == 1) {
 		printf("Got reply for service: %d - not yet implemented.\n", type);
+		
+		packet_print((unsigned char*) recvbuffer, 1000);
 	}
 
 	// Service type : 2
