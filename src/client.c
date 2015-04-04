@@ -52,6 +52,10 @@ int main(int argc, char **argv) {
 	char **myargv; // the command inputted by user as argument vector
 	int myargc;    // argument count for the previous vector
 
+	struct timeval timeout;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 100;
+
 	if (argc < 3) {
 		printf("Usage: client <server ip> <server port>\n");
 		return 2;
@@ -96,6 +100,14 @@ int main(int argc, char **argv) {
 		perror("ERROR: converting server IP to binary address failed, please input proper IP");
 		return 6;
 	}
+/*
+	// empty udp packet queue just in case
+	if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+		perror("ERROR: setting socket options failed.");
+		exit(9);
+	}
+	while(recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len) > 0);
+	//addr_remote.sin_port = htons(port); */
 
 	//// Command loop
 
@@ -178,6 +190,9 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	printf("Waiting for reply...\n");
 	int num_recv_bytes = recvfrom(*socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)addr_remote, addr_len);
 	if(num_recv_bytes <= -1) {
+		if(errno == EAGAIN) {
+
+		}
 		perror("ERROR: could not receive via recvfrom");
 		return false;
 	}
@@ -197,27 +212,27 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	int32_t id;
 	unsigned int type;
 	char* ptr = recvbuffer;
-	
+
 	id = unpack_int32(&ptr);
 	type = *ptr;
 	ptr++;
-	
+
 	printf("Got reply for id %u service: %d\n", (uint32_t) id, type);
-	
+
 	if (id != request->id || type != request->service) {
 		printf("Got reply that didn't match our request. Ignoring it.\n");
 		return false;
 	}
-	
+
 	if (type == 1) {
 		printf("Got reply for service: %d - not yet implemented.\n", type);
-		
+
 		packet_print((unsigned char*) recvbuffer, num_recv_bytes);
-		
+
 		int32_t amount = unpack_int32(&ptr);
 		char *tmp = (char *) &amount;
 		printf("%d %d %d %d\n", tmp[0], tmp[1], tmp[2], tmp[3]);
-		
+
 		printf("lentoja : %d oikeita lentoja: %d \n", amount, recvbuffer[8]);
 
 		}
@@ -231,15 +246,15 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		char day[3];
 		char hour[3];
 		char minute[3];
-		
+
 		seats = unpack_int32(&ptr);
-		
+
 		unpack_str(&ptr, year, 4);
 		unpack_str(&ptr, month, 2);
 		unpack_str(&ptr, day, 2);
 		unpack_str(&ptr, hour, 2);
 		unpack_str(&ptr, minute, 2);
-		
+
 		float fare = unpack_float(&ptr);
 		printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
 		printf("\n\n");
