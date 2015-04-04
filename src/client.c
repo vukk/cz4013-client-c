@@ -179,8 +179,8 @@ void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		// TODO: unmarshall from recvbuffer, output replies
 
 		printf("\n");
-		printf("\n");
 
+		// Figure out response ID and type
 		int32_t id;
 		unsigned int type;
 
@@ -194,11 +194,19 @@ void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 			}
 		}
 
+		if (type == 1) {
+			printf("Got reply for service: %d - not yet implemented.\n", type);
+		}
 
+		// Service type : 2
 		if (type == 2) {
 
 			int32_t seats;
-			char time[12];
+			char year[5];
+			char month[3];
+			char day[3];
+			char hour[3];
+			char minute[3];
 
 			char* ptr = &(recvbuffer[5]);
 
@@ -206,19 +214,32 @@ void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 			ptr += sizeof(int32_t);
 			seats = ntohl(seats);
 
-			memcpy(&time, ptr, 12*sizeof(char));
+			unpack_str(&ptr, year, 4);
+			unpack_str(&ptr, month, 2);
+			unpack_str(&ptr, day, 2);
+			unpack_str(&ptr, hour, 2);
+			unpack_str(&ptr, minute, 2);
 
-			for (int i = 0; i < 12; i++ ) {
-				printf("%c\n", time[i]);
-			}
+			float fare = unpack_float(ptr);
 
-			printf("ID: %d \t TYPE: %d \t SEATS: %d\n", id, type, seats);
-			printf("\n");
+			printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
+			printf("\n\n");
+
 		}
 
-		printf("\n");
-		packet_print((unsigned char *) recvbuffer, num_recv_bytes);
-		printf("\n");
+
+		if (type == 3) {
+			printf("Got reply for service: %d - not yet implemented.\n", type);
+		}
+		if (type == 4) {
+			printf("Got reply for service: %d - not yet implemented.\n", type);
+		}
+		if (type == 5) {
+			printf("Got reply for service: %d - not yet implemented.\n", type);
+		}
+		if (type == 6) {
+			printf("Got reply for service: %d - not yet implemented.\n", type);
+		}
 	}
 }
 

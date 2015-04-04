@@ -6,7 +6,7 @@
 #include <string.h>
 #include <netinet/in.h>
 
-float unpack_float(unsigned char **value) {
+float unpack_float(char **value) {
     union floatint32 {
         float   f;
         int32_t i;
@@ -19,7 +19,7 @@ float unpack_float(unsigned char **value) {
     return result.f;
 }
 
-int32_t unpack_int32(unsigned char **value) {
+int32_t unpack_int32(char **value) {
     int32_t result;
     memcpy(&result, value, sizeof(int32_t));
     result = htonl(result);
@@ -28,7 +28,7 @@ int32_t unpack_int32(unsigned char **value) {
 }
 
 // destination must have size n+1 to fit the end of string \0
-void unpack_str(unsigned char **source, char *destination, int n) {
+void unpack_str(char **source, char *destination, int n) {
     memcpy(destination, *source, sizeof(char)*n);
     destination[n] = '\0';
     *source += n;
