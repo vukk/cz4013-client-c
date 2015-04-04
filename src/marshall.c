@@ -1,11 +1,27 @@
-#include <stdint.h>
-#include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-unsigned char * pack_uint32(unsigned char *to, uint32_t intval)
+#include <string.h>
+#include <netinet/in.h>
+
+float unpack_float(unsigned char *value) {
+    union floatint32 {
+        float   f;
+        int32_t i;
+    };
+
+    union floatint32 result;
+    memcpy(&(result.i), value, sizeof(int32_t));
+    result.i = htonl(result.i);
+    return result.f;
+}
+
+unsigned char * pack_uint32(unsigned char *to, int32_t intval)
 {
-    memcpy(to, &intval, sizeof(uint32_t));
-    return to + sizeof(uint32_t);
+    memcpy(to, &intval, sizeof(int32_t));
+    return to + sizeof(int32_t);
 }
 
 // will pack the first n chars, then end with a \0
@@ -20,9 +36,9 @@ unsigned char * pack_str(unsigned char *to, char *str, int n)
   	return to + n + 1; // return pointer to where packing ended
 }
 
-void dumpint(uint32_t n)
+void dumpint(int32_t n)
 {
-    uint32_t i;
+    int32_t i;
     for (i = 1 << 31; i > 0; i = i / 2) {
         (n & i) ? printf("1"): printf("0");
 	}
@@ -30,7 +46,7 @@ void dumpint(uint32_t n)
 
 void dumpchar(unsigned char n)
 {
-    uint32_t i;
+    int32_t i;
     for (i = 1 << 7; i > 0; i = i / 2) {
         (n & i) ? printf("1"): printf("0");
 	}

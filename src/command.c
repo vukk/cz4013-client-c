@@ -83,7 +83,7 @@ bool cmd_destinations(Message *msg, char *from) {
 	int len_from = strlen(from);
 	unsigned char *data;
 	// +1 to account for null character in the string
-	msg->length_data = sizeof(uint32_t) + len_from + 1;
+	msg->length_data = sizeof(int32_t) + len_from + 1;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
@@ -97,11 +97,11 @@ bool cmd_destinations(Message *msg, char *from) {
 
 // service 1
 bool cmd_find(Message *msg, char *from, char *to) {
-	uint32_t len_from	= strlen(from);
-	uint32_t len_to 	= strlen(to);
+	int32_t len_from	= strlen(from);
+	int32_t len_to 	= strlen(to);
 	unsigned char *data;
 	// +2 to account for null characters on the two strings
-	msg->length_data = sizeof(uint32_t)*2 + len_from + len_to + 2;
+	msg->length_data = sizeof(int32_t)*2 + len_from + len_to + 2;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
@@ -117,13 +117,13 @@ bool cmd_find(Message *msg, char *from, char *to) {
 
 // service 2
 bool cmd_show(Message *msg, char *id) {
-	uint32_t flightid;
+	int32_t flightid;
 	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
 	unsigned char *data;
-	msg->length_data = sizeof(uint32_t);
+	msg->length_data = sizeof(int32_t);
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
@@ -136,8 +136,8 @@ bool cmd_show(Message *msg, char *id) {
 
 // service 3
 bool cmd_reserve(Message *msg, char *id, char *num) {
-	uint32_t flightid;
-	uint32_t seats;
+	int32_t flightid;
+	int32_t seats;
 	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
@@ -147,7 +147,7 @@ bool cmd_reserve(Message *msg, char *id, char *num) {
 		return false;
 	};
 	unsigned char *data;
-	msg->length_data = sizeof(uint32_t)*2;
+	msg->length_data = sizeof(int32_t)*2;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
@@ -161,8 +161,8 @@ bool cmd_reserve(Message *msg, char *id, char *num) {
 
 // service 5
 bool cmd_cancel(Message *msg, char *id, char *num) {
-	uint32_t flightid;
-	uint32_t seats;
+	int32_t flightid;
+	int32_t seats;
 	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
@@ -172,7 +172,7 @@ bool cmd_cancel(Message *msg, char *id, char *num) {
 		return false;
 	};
 	unsigned char *data;
-	msg->length_data = sizeof(uint32_t)*2;
+	msg->length_data = sizeof(int32_t)*2;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
@@ -186,8 +186,8 @@ bool cmd_cancel(Message *msg, char *id, char *num) {
 
 // service 4
 bool cmd_monitor(Message *msg, char *id, char *time) {
-	uint32_t flightid;
-	uint32_t seconds;
+	int32_t flightid;
+	int32_t seconds;
 	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
@@ -197,7 +197,7 @@ bool cmd_monitor(Message *msg, char *id, char *time) {
 		return false;
 	};
 	unsigned char *data;
-	msg->length_data = sizeof(uint32_t)*2;
+	msg->length_data = sizeof(int32_t)*2;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 

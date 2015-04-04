@@ -11,7 +11,7 @@
 
 #include "message.h"
 
-static uint32_t nextmsgnum = 1;	// next message number
+static int32_t nextmsgnum = 1;	// next message number
 
 Message * message_new() {
 	Message *msg;
@@ -31,14 +31,14 @@ void message_destroy(Message * msg) {
 unsigned char * message_to_packet(Message *msg, int *length)
 {
 	unsigned char *buffer;
-	*length = sizeof(uint32_t) + sizeof(unsigned char) + msg->length_data;
+	*length = sizeof(int32_t) + sizeof(unsigned char) + msg->length_data;
 	buffer = malloc(*length);
 	unsigned char *ptr = buffer;
 
-    uint32_t flightid = htonl(msg->id);
+    int32_t flightid = htonl(msg->id);
 
-	memcpy(ptr, &flightid, sizeof(uint32_t));
-	ptr = ptr + sizeof(uint32_t);
+	memcpy(ptr, &flightid, sizeof(int32_t));
+	ptr = ptr + sizeof(int32_t);
 	memcpy(ptr, &(msg->service), sizeof(unsigned char));
 	ptr = ptr + sizeof(unsigned char);
 	memcpy(ptr, msg->data, msg->length_data);
