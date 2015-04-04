@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 	// bind to every local ip address, pick any port
 	addr_self.sin_family = AF_INET;
 	addr_self.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr_self.sin_port = htons(0);
+	addr_self.sin_port = htons(2222);
 
 	if (bind(socket_fd, (struct sockaddr *)&addr_self, sizeof(addr_self)) < 0) {
 		perror("ERROR: binding local socket failed");
