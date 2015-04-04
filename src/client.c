@@ -14,6 +14,7 @@
 
 #include "message.h"
 #include "command.h"
+#include "marshall.h"
 
 #define RECV_BUFFER_SIZE 1000
 
