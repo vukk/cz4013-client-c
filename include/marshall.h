@@ -1,7 +1,7 @@
 #ifndef MARSHALL_H
 #define MARSHALL_H
 
-float unpack_float(char *value);
+float unpack_float(char **value);
 int32_t unpack_int32(char **value);
 void unpack_str(char **source, char *destination, int n);
 

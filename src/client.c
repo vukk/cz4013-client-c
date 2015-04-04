@@ -204,26 +204,15 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	
 	printf("Got reply for id %u service: %d\n", (uint32_t) id, type);
 	
-/*
-	for ( int i = 0; i < 5; i++ ) {
-		if (i < 4) {
-			id = id << 8;
-			id = id | recvbuffer[i];
-		}
-		else if (i == 4) {
-			type = recvbuffer[i];
-		}
-	}*/
-
 	if (id != request->id || type != request->service) {
 		printf("Got reply that didn't match our request. Ignoring it.\n");
 		return false;
 	}
-
+	
 	if (type == 1) {
 		printf("Got reply for service: %d - not yet implemented.\n", type);
 		
-		packet_print((unsigned char*) recvbuffer, 1000);
+		packet_print((unsigned char*) recvbuffer, num_recv_bytes);
 		
 		int32_t amount = unpack_int32(&ptr);
 		char *tmp = (char *) &amount;
@@ -231,8 +220,6 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		
 		printf("lentoja : %d oikeita lentoja: %d \n", amount, recvbuffer[8]);
 
-
-//     int32_t unpack_int32(char **value) {
 		}
 
 	// Service type : 2
@@ -244,21 +231,16 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		char day[3];
 		char hour[3];
 		char minute[3];
-
-		char* ptr = &(recvbuffer[5]);
-
-		memcpy(&seats, ptr, sizeof(int32_t));
-		ptr += sizeof(int32_t);
-		seats = ntohl(seats);
-
+		
+		seats = unpack_int32(&ptr);
+		
 		unpack_str(&ptr, year, 4);
 		unpack_str(&ptr, month, 2);
 		unpack_str(&ptr, day, 2);
 		unpack_str(&ptr, hour, 2);
 		unpack_str(&ptr, minute, 2);
-
-		float fare = unpack_float(ptr);
-
+		
+		float fare = unpack_float(&ptr);
 		printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
 		printf("\n\n");
 
