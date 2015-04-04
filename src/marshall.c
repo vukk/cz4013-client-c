@@ -13,7 +13,7 @@ float unpack_float(char **value) {
     };
 
     union floatint32 result;
-    memcpy(&(result.i), value, sizeof(int32_t));
+    memcpy(&(result.i), *value, sizeof(int32_t));
     result.i = htonl(result.i);
     *value += sizeof(int32_t);
     return result.f;
@@ -21,7 +21,8 @@ float unpack_float(char **value) {
 
 int32_t unpack_int32(char **value) {
     int32_t result;
-    memcpy(&result, value, sizeof(int32_t));
+
+    memcpy(&result, *value, sizeof(int32_t));
     result = htonl(result);
     *value += sizeof(int32_t);
     return result;
