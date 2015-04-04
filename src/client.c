@@ -295,11 +295,41 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 		else 				       printf("Requested flight not found.\n");
 	
 	}
+	
+	// Service 5 ::
+	// cancel <flight id> <seats>
 	if (type == 5) {
-		printf("Got reply for service: %d - not yet implemented.\n", type);
+	
+		int32_t cancelled = unpack_int32(&ptr);
+		if (cancelled > 0) 		  printf("You cancelled %d tickets on this flight.\n", cancelled);
+		else if (cancelled == 0) printf("Insufficient number of tickets booked.\n");
+		else 							  printf("Requested flight not found.\n");
 	}
+	
+	// Service 6 ::
+	// destinations <source>
 	if (type == 6) {
-		printf("Got reply for service: %d - not yet implemented.\n", type);
+	
+		int32_t amount = unpack_int32(&ptr);
+		if (amount == 0) printf("No flights departing from this airport.\n");
+		if (amount < 0)   printf("Source airport not recognized.\n");
+		else {
+		
+		
+			printf("There are flights departing to following destinations:\n");
+			
+			for (int i = 0; i < amount; i++ ) {
+				int tmp_length = unpack_int32(&ptr);
+				char tmp_buffer[tmp_length+1];
+				unpack_str(&ptr, tmp_buffer, tmp_length);
+				printf(" - %s\n", tmp_buffer);
+			}
+			
+			printf("\n");
+		}
+	
+	
+	
 	}
 
 	return true;
