@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <time.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -18,7 +20,9 @@
 #include "current_utc_time.h"
 
 #define RECV_BUFFER_SIZE 1000
-#define CHAOS_RATE 0.03
+#define RATE_OF_CHAOS 0.25
+#define MAX_ERROR 20
+#define MAX_RETRY 5
 
 static const char* msg_help = "Usage:\n"
 "  destinations <from>\n"
@@ -56,6 +60,9 @@ int main(int argc, char **argv) {
 	struct timeval timeout;
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 100;
+
+	// seed random
+	srand(time(NULL));
 
 	if (argc < 3) {
 		printf("Usage: client <server ip> <server port>\n");
@@ -177,16 +184,29 @@ int main(int argc, char **argv) {
 
 		struct timespec now;
 		int errcount = 0;
+		int retrycount = 0;
 		bool again = false;
 		// receive
 		while(true) {
-			if(errcount > 20) {
+			if(errcount > MAX_ERROR) {
 				fprintf(stderr, "ERROR: receive error count exceeded maximum (20).\n");
+				break;
+			}
+
+			if(retrycount > MAX_RETRY) {
+				printf("Failed to receive a reply.\n");
 				break;
 			}
 
 			if(!receive_message(&again, &socket_fd, recvbuffer, &addr_remote, &addr_len)) {
 				errcount++;
+				continue;
+			}
+
+			// if not monitoring, and socket read times out (again == true)
+			if(request->service != 4 && again) {
+				retrycount++;
+				printf("Retrying...\n"); // TODO ACTUALLY SEND THE MESSAGE AGAIN
 				continue;
 			}
 
@@ -210,7 +230,9 @@ int main(int argc, char **argv) {
 }
 
 bool absolute_chaos() {
-
+    if ((double)rand() / (double)RAND_MAX < RATE_OF_CHAOS)
+		return true;
+	return false;
 }
 
 bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
@@ -235,6 +257,10 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 
 	// else: we received a packet fine
 
+	// implement packet dropping
+	if (absolute_chaos())
+		return false;
+
 	// Figure out response ID and type
 	int32_t id;
 	unsigned int type;
@@ -256,11 +282,11 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 		int32_t amount = unpack_int32(&ptr);
 		int32_t flights[amount];
 
-		if 		  (amount == 0 ) printf("No Route found flying from source to destination.\n");
+		if 		(amount ==  0) printf("No Route found flying from source to destination.\n");
 		else if (amount == -1) printf("Source airport not recognised.\n");
 		else if (amount == -2) printf("Destination airport not recognised.\n");
 		else if (amount == -3) printf("Both source and destination airports not recognised.\n");
-		else if (amount < -3  ) printf("Impossible error occurred.");
+		else if (amount <  -3) printf("Impossible error occurred.");
 		else {
 			printf("Flights : %d\n", amount);
 			for (int i = 0; i < amount; i++ ) {
@@ -300,16 +326,18 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 
 	}
 
-
 	// Service  3 ::
 	// reserve <id> <tickets>
 	if (type == 3) {
 
 		int32_t reserved  = unpack_int32(&ptr);
 
-		if 		  (reserved > 0)   printf("Congratulations! You reserved %d tickets for the flight.\n", reserved);
-		else if (reserved == 0) printf("Sorry! This flight is sold out.\n");
-		else 						     printf("Requested flight not found.\n");
+		if (reserved > 0)
+			printf("Congratulations! You reserved %d tickets for the flight.\n", reserved);
+		else if (reserved == 0)
+			printf("Sorry! This flight is sold out.\n");
+		else
+			printf("Requested flight not found.\n");
 
 	}
 
@@ -319,8 +347,10 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 
 		int32_t availability = unpack_int32(&ptr);
 
-		if (availability >= 0) printf("Update: There are %d seats available on the flight.\n", availability);
-		else 				       printf("Requested flight not found.\n");
+		if (availability >= 0)
+			printf("Update: There are %d seats available on the flight.\n", availability);
+		else
+			printf("Requested flight not found.\n");
 
 	}
 	
