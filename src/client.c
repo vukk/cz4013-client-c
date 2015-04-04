@@ -18,6 +18,7 @@
 #include "current_utc_time.h"
 
 #define RECV_BUFFER_SIZE 1000
+#define CHAOS_RATE 0.03
 
 static const char* msg_help = "Usage:\n"
 "  destinations <from>\n"
@@ -32,7 +33,7 @@ static const char* msg_help = "Usage:\n"
 static const char *msg_input = "Please input next command:";
 
 // declare internal functions
-bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
+bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
 
 
@@ -100,14 +101,16 @@ int main(int argc, char **argv) {
 		perror("ERROR: converting server IP to binary address failed, please input proper IP");
 		return 6;
 	}
-/*
+
 	// empty udp packet queue just in case
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 500;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
 		perror("ERROR: setting socket options failed.");
 		exit(9);
 	}
 	while(recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len) > 0);
-	//addr_remote.sin_port = htons(port); */
+	//addr_remote.sin_port = htons(port);
 
 	//// Command loop
 
@@ -151,28 +154,49 @@ int main(int argc, char **argv) {
 		// set starting time
 		current_utc_time(&(request->start_ts));
 		// send
-		printf("Sending packet... to %u port %hu\n", addr_remote.sin_addr.s_addr, addr_remote.sin_port);
+		//printf("Sending request id: %d to %u port %hu\n", request->id, addr_remote.sin_addr.s_addr, addr_remote.sin_port);
+		printf("Sending request id: %d addr: %s port: %d\n", request->id, server, port);
 		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
 			perror("ERROR: could not send packet via sendto");
 			exit(7);
 		}
 
+		// set timeout appropriately
+		if(request->service == 4) { // monitor
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 500;
+		}
+		else {
+			timeout.tv_sec = 10;
+			timeout.tv_usec = 0;
+		}
+		if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+			perror("ERROR: setting socket options failed.");
+			exit(9);
+		}
+
 		struct timespec now;
 		int errcount = 0;
+		bool again = false;
 		// receive
 		while(true) {
 			if(errcount > 20) {
 				fprintf(stderr, "ERROR: receive error count exceeded maximum (20).\n");
 				break;
 			}
-			if(!receive_message(&socket_fd, recvbuffer, &addr_remote, &addr_len)) {
+
+			if(!receive_message(&again, &socket_fd, recvbuffer, &addr_remote, &addr_len)) {
 				errcount++;
 				continue;
 			}
+
 			current_utc_time(&now);
 			// if monitoring period exceeded, stop monitoring
-			if (now.tv_sec - (request->start_ts).tv_sec >= request->monitor_period)
+			if (now.tv_sec - (request->start_ts).tv_sec >= request->monitor_period) {
+				if(request->service == 4) // monitor
+					printf("Timed out.\n");
 				break;
+			}
 		}
 
 		// TODO: add failures and tolerance, retries and timeouts
@@ -185,13 +209,21 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
+bool absolute_chaos() {
+
+}
+
+bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
 	// receive
-	printf("Waiting for reply...\n");
+	if(!*again)
+		printf("Waiting for reply...\n");
+	*again = false;
+
 	int num_recv_bytes = recvfrom(*socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)addr_remote, addr_len);
 	if(num_recv_bytes <= -1) {
 		if(errno == EAGAIN) {
-
+			*again = true;
+			return true;
 		}
 		perror("ERROR: could not receive via recvfrom");
 		return false;
@@ -202,10 +234,6 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	}
 
 	// else: we received a packet fine
-
-	// TODO: unmarshall from recvbuffer, output replies
-
-	printf("\n");
 
 	// Figure out response ID and type
 	int32_t id;
@@ -227,7 +255,7 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 
 		int32_t amount = unpack_int32(&ptr);
 		int32_t flights[amount];
-		
+
 		if 		  (amount == 0 ) printf("No Route found flying from source to destination.\n");
 		else if (amount == -1) printf("Source airport not recognised.\n");
 		else if (amount == -2) printf("Destination airport not recognised.\n");
@@ -241,7 +269,7 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 			}
 			printf("\n");
 		}
-		
+
 		}
 
 	// Service  2 ::
@@ -276,24 +304,24 @@ bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_
 	// Service  3 ::
 	// reserve <id> <tickets>
 	if (type == 3) {
-		
+
 		int32_t reserved  = unpack_int32(&ptr);
-		
+
 		if 		  (reserved > 0)   printf("Congratulations! You reserved %d tickets for the flight.\n", reserved);
 		else if (reserved == 0) printf("Sorry! This flight is sold out.\n");
 		else 						     printf("Requested flight not found.\n");
-		
+
 	}
-	
+
 	// Service 4 ::
 	// monitor <flight id> <time>
 	if (type == 4) {
-	
+
 		int32_t availability = unpack_int32(&ptr);
-		
+
 		if (availability >= 0) printf("Update: There are %d seats available on the flight.\n", availability);
 		else 				       printf("Requested flight not found.\n");
-	
+
 	}
 	
 	// Service 5 ::
