@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include <string.h>
+#include <netinet/in.h>
 
 #include "command.h"
 #include "marshall.h"
@@ -117,7 +118,7 @@ bool cmd_find(Message *msg, char *from, char *to) {
 // service 2
 bool cmd_show(Message *msg, char *id) {
 	uint32_t flightid;
-	if (!sscanf(id, "%i", &flightid)) {
+	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
@@ -137,11 +138,11 @@ bool cmd_show(Message *msg, char *id) {
 bool cmd_reserve(Message *msg, char *id, char *num) {
 	uint32_t flightid;
 	uint32_t seats;
-	if (!sscanf(id, "%i", &flightid)) {
+	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
-	if (!sscanf(num, "%i", &seats)) {
+	if (!sscanf(num, "%u", &seats)) {
 		fprintf(stderr, "ERROR: Number of seats has to be an integer.\n");
 		return false;
 	};
@@ -162,11 +163,11 @@ bool cmd_reserve(Message *msg, char *id, char *num) {
 bool cmd_cancel(Message *msg, char *id, char *num) {
 	uint32_t flightid;
 	uint32_t seats;
-	if (!sscanf(id, "%i", &flightid)) {
+	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
-	if (!sscanf(num, "%i", &seats)) {
+	if (!sscanf(num, "%u", &seats)) {
 		fprintf(stderr, "ERROR: Number of seats has to be an integer.\n");
 		return false;
 	};
@@ -187,11 +188,11 @@ bool cmd_cancel(Message *msg, char *id, char *num) {
 bool cmd_monitor(Message *msg, char *id, char *time) {
 	uint32_t flightid;
 	uint32_t seconds;
-	if (!sscanf(id, "%i", &flightid)) {
+	if (!sscanf(id, "%u", &flightid)) {
 		fprintf(stderr, "ERROR: Flight ID has to be an integer.\n");
 		return false;
 	};
-	if (!sscanf(time, "%i", &seconds)) {
+	if (!sscanf(time, "%u", &seconds)) {
 		fprintf(stderr, "ERROR: Monitoring time has to be an integer (seconds).\n");
 		return false;
 	};
