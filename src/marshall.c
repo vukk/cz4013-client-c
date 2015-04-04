@@ -27,6 +27,13 @@ int32_t unpack_int32(unsigned char **value) {
     return result;
 }
 
+// destination must have size n+1 to fit the end of string \0
+void unpack_str(unsigned char **source, char *destination, int n) {
+    memcpy(destination, *source, sizeof(char)*n);
+    destination[n] = '\0';
+    *source += n;
+}
+
 unsigned char * pack_int32(unsigned char *to, int32_t intval)
 {
     intval = htonl(intval);
@@ -34,16 +41,19 @@ unsigned char * pack_int32(unsigned char *to, int32_t intval)
     return to + sizeof(int32_t);
 }
 
-// will pack the first n chars, then end with a \0
+// will pack the first n chars, don't end with \0 since string lengths
+// are encoded in our binary representation
 unsigned char * pack_str(unsigned char *to, char *str, int n)
 {
+    /*
 	// could memcpy...
-  	/* assumes 8-bit char of course */
+  	// assumes 8-bit char of course
 	for (int i = 0; i < n; i++) {
 		to[i] = str[i];
 	}
-	to[n] = '\0';
-  	return to + n + 1; // return pointer to where packing ended
+    */
+    memcpy(to, str, sizeof(char)*n);
+  	return to + n; // return pointer to where packing ended
 }
 
 void dumpint(int32_t n)

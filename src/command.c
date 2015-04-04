@@ -82,8 +82,7 @@ command_t pick_cmd(char *cmdstr) {
 bool cmd_destinations(Message *msg, char *from) {
 	int len_from = strlen(from);
 	unsigned char *data;
-	// +1 to account for null character in the string
-	msg->length_data = sizeof(int32_t) + len_from + 1;
+	msg->length_data = sizeof(int32_t) + len_from;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
@@ -100,8 +99,7 @@ bool cmd_find(Message *msg, char *from, char *to) {
 	int32_t len_from	= strlen(from);
 	int32_t len_to 	= strlen(to);
 	unsigned char *data;
-	// +2 to account for null characters on the two strings
-	msg->length_data = sizeof(int32_t)*2 + len_from + len_to + 2;
+	msg->length_data = sizeof(int32_t)*2 + len_from + len_to;
 	data = malloc(msg->length_data);
 	unsigned char *ptr = data;
 
