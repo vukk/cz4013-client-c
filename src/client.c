@@ -32,7 +32,7 @@ static const char* msg_help = "Usage:\n"
 static const char *msg_input = "Please input next command:";
 
 // declare internal functions
-void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
+bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
 
 
@@ -146,10 +146,19 @@ int main(int argc, char **argv) {
 		}
 
 		struct timespec now;
+		int errcount = 0;
 		// receive
 		while(true) {
-			receive_message(&socket_fd, recvbuffer, &addr_remote, &addr_len);
+			if(errcount > 20) {
+				fprintf(stderr, "ERROR: receive error count exceeded maximum (20).\n");
+				break;
+			}
+			if(!receive_message(&socket_fd, recvbuffer, &addr_remote, &addr_len)) {
+				errcount++;
+				continue;
+			}
 			current_utc_time(&now);
+			// if monitoring period exceeded, stop monitoring
 			if (now.tv_sec - (request->start_ts).tv_sec >= request->monitor_period)
 				break;
 		}
@@ -164,83 +173,93 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
+bool receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
 	// receive
 	printf("Waiting for reply...\n");
 	int num_recv_bytes = recvfrom(*socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)addr_remote, addr_len);
 	if(num_recv_bytes <= -1) {
 		perror("ERROR: could not receive via recvfrom");
+		return false;
 	}
 	else if (num_recv_bytes == 0) {
 		printf("Received empty response.\n");
+		return false;
 	}
-	else {
-		printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
-		// TODO: unmarshall from recvbuffer, output replies
 
-		printf("\n");
+	// else: we received a packet fine
 
-		// Figure out response ID and type
-		int32_t id;
-		unsigned int type;
+	printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
+	// TODO: unmarshall from recvbuffer, output replies
 
-		for ( int i = 0; i < 5; i++ ) {
-			if (i < 4) {
-				id = id << 8;
-				id = id | recvbuffer[i];
-			}
-			else if (i == 4) {
-				type = recvbuffer[i];
-			}
+	printf("\n");
+
+	// Figure out response ID and type
+	int32_t id;
+	unsigned int type;
+
+	for ( int i = 0; i < 5; i++ ) {
+		if (i < 4) {
+			id = id << 8;
+			id = id | recvbuffer[i];
 		}
-
-		if (type == 1) {
-			printf("Got reply for service: %d - not yet implemented.\n", type);
-		}
-
-		// Service type : 2
-		if (type == 2) {
-
-			int32_t seats;
-			char year[5];
-			char month[3];
-			char day[3];
-			char hour[3];
-			char minute[3];
-
-			char* ptr = &(recvbuffer[5]);
-
-			memcpy(&seats, ptr, sizeof(int32_t));
-			ptr += sizeof(int32_t);
-			seats = ntohl(seats);
-
-			unpack_str(&ptr, year, 4);
-			unpack_str(&ptr, month, 2);
-			unpack_str(&ptr, day, 2);
-			unpack_str(&ptr, hour, 2);
-			unpack_str(&ptr, minute, 2);
-
-			float fare = unpack_float(ptr);
-
-			printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
-			printf("\n\n");
-
-		}
-
-
-		if (type == 3) {
-			printf("Got reply for service: %d - not yet implemented.\n", type);
-		}
-		if (type == 4) {
-			printf("Got reply for service: %d - not yet implemented.\n", type);
-		}
-		if (type == 5) {
-			printf("Got reply for service: %d - not yet implemented.\n", type);
-		}
-		if (type == 6) {
-			printf("Got reply for service: %d - not yet implemented.\n", type);
+		else if (i == 4) {
+			type = recvbuffer[i];
 		}
 	}
+
+	if (id != request->id || type != request->service) {
+		printf("Got reply that didn't match our request. Ignoring it.\n");
+		return false;
+	}
+
+	if (type == 1) {
+		printf("Got reply for service: %d - not yet implemented.\n", type);
+	}
+
+	// Service type : 2
+	if (type == 2) {
+
+		int32_t seats;
+		char year[5];
+		char month[3];
+		char day[3];
+		char hour[3];
+		char minute[3];
+
+		char* ptr = &(recvbuffer[5]);
+
+		memcpy(&seats, ptr, sizeof(int32_t));
+		ptr += sizeof(int32_t);
+		seats = ntohl(seats);
+
+		unpack_str(&ptr, year, 4);
+		unpack_str(&ptr, month, 2);
+		unpack_str(&ptr, day, 2);
+		unpack_str(&ptr, hour, 2);
+		unpack_str(&ptr, minute, 2);
+
+		float fare = unpack_float(ptr);
+
+		printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
+		printf("\n\n");
+
+	}
+
+
+	if (type == 3) {
+		printf("Got reply for service: %d - not yet implemented.\n", type);
+	}
+	if (type == 4) {
+		printf("Got reply for service: %d - not yet implemented.\n", type);
+	}
+	if (type == 5) {
+		printf("Got reply for service: %d - not yet implemented.\n", type);
+	}
+	if (type == 6) {
+		printf("Got reply for service: %d - not yet implemented.\n", type);
+	}
+
+	return true;
 }
 
 // the following utility function is from
