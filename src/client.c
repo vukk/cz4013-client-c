@@ -153,6 +153,45 @@ int main(int argc, char **argv) {
 		else {
 			printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
 			// TODO: unmarshall from recvbuffer, output replies
+			
+			printf("\n");
+			printf("\n");
+			
+			int32_t id;
+			unsigned int type;
+					
+			for ( int i = 0; i < 5; i++ ) {
+				if (i < 4) {
+					id = id << 8;
+					id = id | recvbuffer[i];
+				}
+				else if (i == 4) {
+					type = recvbuffer[i];
+				}
+			}
+			
+			
+			if (type == 2) {
+			
+				int32_t seats;
+				char time[12];
+				
+				char* ptr = &(recvbuffer[5]);
+					
+				memcpy(&seats, ptr, sizeof(int32_t));
+				ptr += sizeof(int32_t);
+				seats = ntohl(seats);
+				
+				memcpy(&time, ptr, 12*sizeof(char));
+				
+				for (int i = 0; i < 12; i++ ) {
+					printf("%c\n", time[i]);
+				}
+			
+				printf("ID: %d \t TYPE: %d \t SEATS: %d\n", id, type, seats);
+				printf("\n");
+			}
+			
 		}
 
 		// TODO: add failures and tolerance, retries and timeouts

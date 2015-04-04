@@ -1,5 +1,5 @@
 IDIR=include
-CC=clang
+CC=gcc
 CFLAGS=-I$(IDIR)
 
 ODIR=obj
