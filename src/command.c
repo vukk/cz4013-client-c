@@ -21,6 +21,7 @@ bool cmd_monitor(Message *msg, char *id, char *time);
 cmd_result_t create_cmd_msg(command_t cmd, int myargc, char **myargv, Message **req) {
 	bool constructed = false;
 	Message *msg = message_new();
+	msg->monitor_period = 0;
 
 	switch (cmd) {
 		case CMD_DESTINATIONS:
@@ -202,6 +203,8 @@ bool cmd_monitor(Message *msg, char *id, char *time) {
 	// pack
 	ptr = pack_int32(ptr, flightid);
 	ptr = pack_int32(ptr, seconds);
+
+	msg->monitor_period = (int) seconds;
 
 	msg->data = data;
 	return true;

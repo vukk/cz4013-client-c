@@ -15,6 +15,7 @@
 #include "message.h"
 #include "command.h"
 #include "marshall.h"
+#include "current_utc_time.h"
 
 #define RECV_BUFFER_SIZE 1000
 
@@ -30,7 +31,8 @@ static const char* msg_help = "Usage:\n"
 
 static const char *msg_input = "Please input next command:";
 
-// declare functions
+// declare internal functions
+void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
 
 
@@ -134,6 +136,8 @@ int main(int argc, char **argv) {
 
 		// Networking
 
+		// set starting time
+		current_utc_time(&(request->start_ts));
 		// send
 		printf("Sending packet... to %u port %hu\n", addr_remote.sin_addr.s_addr, addr_remote.sin_port);
 		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
@@ -141,57 +145,13 @@ int main(int argc, char **argv) {
 			exit(7);
 		}
 
+		struct timespec now;
 		// receive
-		printf("Waiting for reply...\n");
-		int num_recv_bytes = recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len);
-		if(num_recv_bytes <= -1) {
-			perror("ERROR: could not receive via recvfrom");
-		}
-    	else if (num_recv_bytes == 0) {
-			printf("Received empty response.\n");
-        }
-		else {
-			printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
-			// TODO: unmarshall from recvbuffer, output replies
-			
-			printf("\n");
-			printf("\n");
-			
-			int32_t id;
-			unsigned int type;
-					
-			for ( int i = 0; i < 5; i++ ) {
-				if (i < 4) {
-					id = id << 8;
-					id = id | recvbuffer[i];
-				}
-				else if (i == 4) {
-					type = recvbuffer[i];
-				}
-			}
-			
-			
-			if (type == 2) {
-			
-				int32_t seats;
-				char time[12];
-				
-				char* ptr = &(recvbuffer[5]);
-					
-				memcpy(&seats, ptr, sizeof(int32_t));
-				ptr += sizeof(int32_t);
-				seats = ntohl(seats);
-				
-				memcpy(&time, ptr, 12*sizeof(char));
-				
-				for (int i = 0; i < 12; i++ ) {
-					printf("%c\n", time[i]);
-				}
-			
-				printf("ID: %d \t TYPE: %d \t SEATS: %d\n", id, type, seats);
-				printf("\n");
-			}
-			
+		while(true) {
+			receive_message(&socket_fd, recvbuffer, &addr_remote, &addr_len);
+			current_utc_time(&now);
+			if (now.tv_sec - (request->start_ts).tv_sec >= request->monitor_period)
+				break;
 		}
 
 		// TODO: add failures and tolerance, retries and timeouts
@@ -202,6 +162,64 @@ int main(int argc, char **argv) {
 	}
 
 	return 0;
+}
+
+void receive_message(int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
+	// receive
+	printf("Waiting for reply...\n");
+	int num_recv_bytes = recvfrom(*socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)addr_remote, addr_len);
+	if(num_recv_bytes <= -1) {
+		perror("ERROR: could not receive via recvfrom");
+	}
+	else if (num_recv_bytes == 0) {
+		printf("Received empty response.\n");
+	}
+	else {
+		printf("Received a packet from server, probably as a response to something. TODO unmarshall and output reply.\n");
+		// TODO: unmarshall from recvbuffer, output replies
+
+		printf("\n");
+		printf("\n");
+
+		int32_t id;
+		unsigned int type;
+
+		for ( int i = 0; i < 5; i++ ) {
+			if (i < 4) {
+				id = id << 8;
+				id = id | recvbuffer[i];
+			}
+			else if (i == 4) {
+				type = recvbuffer[i];
+			}
+		}
+
+
+		if (type == 2) {
+
+			int32_t seats;
+			char time[12];
+
+			char* ptr = &(recvbuffer[5]);
+
+			memcpy(&seats, ptr, sizeof(int32_t));
+			ptr += sizeof(int32_t);
+			seats = ntohl(seats);
+
+			memcpy(&time, ptr, 12*sizeof(char));
+
+			for (int i = 0; i < 12; i++ ) {
+				printf("%c\n", time[i]);
+			}
+
+			printf("ID: %d \t TYPE: %d \t SEATS: %d\n", id, type, seats);
+			printf("\n");
+		}
+
+		printf("\n");
+		packet_print((unsigned char *) recvbuffer, num_recv_bytes);
+		printf("\n");
+	}
 }
 
 // the following utility function is from

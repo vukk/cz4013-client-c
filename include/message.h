@@ -1,12 +1,22 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include <time.h>
+#include <sys/time.h>
+
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 typedef struct Message
 {
-   uint32_t id;
-   unsigned char service;
-   unsigned char *data;
-   int length_data;
+    struct timespec start_ts;
+    int monitor_period;
+    int32_t id;
+    unsigned char service;
+    unsigned char *data;
+    int length_data;
 } Message;
 
 // message constructor
