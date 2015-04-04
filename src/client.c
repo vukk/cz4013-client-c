@@ -39,7 +39,7 @@ static Message *request; 		// contains the message to send
 int main(int argc, char **argv) {
 	// addresses
 	struct sockaddr_in addr_self, addr_remote;
-	unsigned int addr_len = sizeof(addr_remote);
+	socklen_t addr_len = sizeof(addr_remote);
 	memset((char *)&addr_self, 0, sizeof(addr_self));
 	memset((char *)&addr_remote, 0, sizeof(addr_remote));
 
