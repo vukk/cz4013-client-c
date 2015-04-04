@@ -15,7 +15,7 @@ _OBJ = marshall.o message.o command.o client.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS) $(LIBS)
 
 client: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
