@@ -62,6 +62,14 @@ int main(int argc, char **argv) {
 		return 3;
 	};
 
+	int ownport = 2222;
+	if (argc == 4) {
+		if (!sscanf(argv[3], "%i", &ownport)) {
+			fprintf(stderr, "ERROR: Own port has to be an integer.\n");
+			return 8;
+		}
+	}
+
 	printf("Welcome. Using server: %s port: %s\nConnecting...\n", argv[1], argv[2]);
 	// create socket
 	if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
@@ -72,7 +80,7 @@ int main(int argc, char **argv) {
 	// bind to every local ip address, pick any port
 	addr_self.sin_family = AF_INET;
 	addr_self.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr_self.sin_port = htons(2222);
+	addr_self.sin_port = htons(ownport);
 
 	if (bind(socket_fd, (struct sockaddr *)&addr_self, sizeof(addr_self)) < 0) {
 		perror("ERROR: binding local socket failed");
