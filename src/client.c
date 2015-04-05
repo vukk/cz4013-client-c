@@ -22,7 +22,7 @@
 #include "current_utc_time.h"
 
 #define RECV_BUFFER_SIZE 1000
-#define RATE_OF_CHAOS 0.15
+#define RATE_OF_CHAOS 0
 #define MAX_ERROR 20
 #define MAX_RETRY 5
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 	int myargc;    // argument count for the previous vector
 
 	struct pollfd poll_fd;
-	int poll_res;
+//	int poll_res;
 
 	int timeout = 100; // milliseconds
 
@@ -88,7 +88,18 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	printf("Welcome. Using server: %s port: %s\nConnecting...\n", argv[1], argv[2]);
+	printf("\nWelcome to\n\n");
+	printf("   _____           ___       _ \n");
+	printf("  / __(_)__  ___ _/ _ |_  __(_)\n");
+	printf(" _\\ \\/ / _ \\/ _ `/ __ | |/ / / \n");
+	printf("/___/_/_//_/\\_, /_/ |_|___/_/  \n");
+	printf("           /___/               \n");
+	printf("\nflight lookup system.\nUsing server %s on port %s.\n\n", argv[1], argv[2]);
+	
+	printf("%s\n", msg_help);
+	
+	
+	
 	// create socket
 	if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("ERROR: can't create UDP socket");
@@ -150,9 +161,13 @@ int main(int argc, char **argv) {
 		int packet_length;
 		unsigned char *packet = message_to_packet(request, &packet_length);
 
+		/*
 		// debug: print out contents of packet being sent.
 		packet_print(packet, packet_length);
-
+		*/
+		
+		printf("\nRequest sent..  ");
+		
 		// Networking
 
 		send_message(&socket_fd, packet, packet_length, &addr_remote, &addr_len, server, port);
@@ -221,7 +236,10 @@ void send_message(int *socket_fd, unsigned char *packet, int packet_length, stru
 	// set starting time
 	current_utc_time(&(request->start_ts));
 	// send
-	printf("Sending request id: %d addr: %s port: %d\n", request->id, server, port);
+	// printf("Sending request id: %d addr: %s port: %d\n", request->id, server, port);
+	server = server;
+	port = port;
+	
 	if (sendto(*socket_fd, packet, packet_length, 0, (struct sockaddr *)addr_remote, *addr_len) == -1) {
 		perror("ERROR: could not send packet via sendto");
 		exit(7);
@@ -281,6 +299,8 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 		printf("Got reply that didn't match our request id req: %d repl: %d service req: %d repl: %d. Ignoring it.\n", request->id, id, request->service, type);
 		return false;
 	}
+	
+	printf("A reply was received.\n\n");
 
 	// Service 1 ::
 	// find <source> <destination>
