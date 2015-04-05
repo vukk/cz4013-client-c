@@ -37,6 +37,7 @@ static const char* msg_help = "Usage:\n"
 static const char *msg_input = "Please input next command:";
 
 // declare internal functions
+void set_timeout(int *socket_fd, struct timeval *timeout);
 void send_message(int *socket_fd, unsigned char *packet, int packet_length, struct sockaddr_in *addr_remote, socklen_t *addr_len, char *server, int port);
 bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
@@ -112,11 +113,8 @@ int main(int argc, char **argv) {
 
 	// empty udp packet queue just in case
 	timeout.tv_sec = 0;
-	timeout.tv_usec = 500;
-	if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-		perror("ERROR: setting socket options failed.");
-		exit(9);
-	}
+	timeout.tv_usec = 50000;
+	set_timeout(&socket_fd, &timeout);
 	while(recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len) > 0);
 	//addr_remote.sin_port = htons(port);
 
@@ -159,32 +157,18 @@ int main(int argc, char **argv) {
 
 		// Networking
 
-		/*
-		// set starting time
-		current_utc_time(&(request->start_ts));
-		// send
-		//printf("Sending request id: %d to %u port %hu\n", request->id, addr_remote.sin_addr.s_addr, addr_remote.sin_port);
-		printf("Sending request id: %d addr: %s port: %d\n", request->id, server, port);
-		if (sendto(socket_fd, packet, packet_length, 0, (struct sockaddr *)&addr_remote, addr_len) == -1) {
-			perror("ERROR: could not send packet via sendto");
-			exit(7);
-		}
-		*/
 		send_message(&socket_fd, packet, packet_length, &addr_remote, &addr_len, server, port);
 
 		// set timeout appropriately
 		if(request->service == 4) { // monitor
 			timeout.tv_sec = 0;
-			timeout.tv_usec = 500;
+			timeout.tv_usec = 50000; // 50 milliseconds
 		}
 		else {
-			timeout.tv_sec = 10;
+			timeout.tv_sec = 5;
 			timeout.tv_usec = 0;
 		}
-		if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-			perror("ERROR: setting socket options failed.");
-			exit(9);
-		}
+		set_timeout(&socket_fd, &timeout);
 
 		struct timespec now;
 		int errcount = 0;
@@ -236,6 +220,23 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+void set_timeout(int *socket_fd, struct timeval *timeout) {
+	#ifdef _WIN32
+	// HOX: hope it doesn't overflow on our usage...
+	//int millis = (timeout->tv_sec * 1000) + (timeout->tv_usec / 1000);
+	uint64_t millis = (timeout->tv_sec * (uint64_t)1000) + (timeout->tv_usec / 1000);
+	if (setsockopt(*socket_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&millis, sizeof(millis)) < 0) {
+		perror("ERROR: setting socket options failed.");
+		exit(9);
+	}
+	#else
+	if (setsockopt(*socket_fd, SOL_SOCKET, SO_RCVTIMEO, timeout, sizeof(*timeout)) < 0) {
+		perror("ERROR: setting socket options failed.");
+		exit(9);
+	}
+	#endif
+}
+
 bool absolute_chaos() {
     if ((double)rand() / (double)RAND_MAX < RATE_OF_CHAOS)
 		return true;
@@ -277,8 +278,11 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 	// else: we received a packet fine
 
 	// implement packet dropping
-	if (absolute_chaos())
+	if (absolute_chaos()) {
+		if (request->service == 4)
+			*again = true;
 		return false;
+	}
 
 	// Figure out response ID and type
 	int32_t id;
