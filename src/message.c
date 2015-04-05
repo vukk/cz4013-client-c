@@ -10,8 +10,9 @@
 #include <assert.h>
 
 #include "message.h"
+#include <time.h>
 
-static int32_t nextmsgnum = 1;	// next message number
+//static int32_t nextmsgnum = 1;	// next message number
 
 Message * message_new() {
 	Message *msg;
@@ -20,7 +21,7 @@ Message * message_new() {
 		perror("ERROR: Allocating a message struct failed\n");
 		exit(1);
 	}
-	msg->id = nextmsgnum++;
+	msg->id = (int) time(NULL);
 	return msg;
 }
 
