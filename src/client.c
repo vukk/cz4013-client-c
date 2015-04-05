@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <poll.h>
+
 #include "message.h"
 #include "command.h"
 #include "marshall.h"
@@ -37,9 +39,9 @@ static const char* msg_help = "Usage:\n"
 static const char *msg_input = "Please input next command:";
 
 // declare internal functions
-void set_timeout(int *socket_fd, struct timeval *timeout);
+//void set_timeout(int *socket_fd, struct timeval *timeout);
 void send_message(int *socket_fd, unsigned char *packet, int packet_length, struct sockaddr_in *addr_remote, socklen_t *addr_len, char *server, int port);
-bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
+bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
 
 
@@ -59,9 +61,10 @@ int main(int argc, char **argv) {
 	char **myargv; // the command inputted by user as argument vector
 	int myargc;    // argument count for the previous vector
 
-	struct timeval timeout;
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 100;
+	struct pollfd poll_fd;
+	int poll_res;
+
+	int timeout = 100; // milliseconds
 
 	// seed random
 	srand(time(NULL));
@@ -111,12 +114,26 @@ int main(int argc, char **argv) {
 		return 6;
 	}
 
+	// setup poll
+	poll_fd.fd = socket_fd;
+	poll_fd.events = POLLIN;
+
 	// empty udp packet queue just in case
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 50000;
-	set_timeout(&socket_fd, &timeout);
-	while(recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len) > 0);
-	//addr_remote.sin_port = htons(port);
+	timeout = 50;
+	while(true) {
+		poll_res = poll(&poll_fd, 1, timeout);
+		if(poll_res == -1) {
+			perror("ERROR: problem while polling socket.");
+		}
+		else if(poll_res == 0) {
+			// timeout
+			break;
+		}
+		else {
+			if(recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len) <= 0)
+				break;
+		}
+	}
 
 	//// Command loop
 
@@ -160,15 +177,10 @@ int main(int argc, char **argv) {
 		send_message(&socket_fd, packet, packet_length, &addr_remote, &addr_len, server, port);
 
 		// set timeout appropriately
-		if(request->service == 4) { // monitor
-			timeout.tv_sec = 0;
-			timeout.tv_usec = 50000; // 50 milliseconds
-		}
-		else {
-			timeout.tv_sec = 5;
-			timeout.tv_usec = 0;
-		}
-		set_timeout(&socket_fd, &timeout);
+		if(request->service == 4) // monitor
+			timeout = 50;
+		else
+			timeout = 5000;
 
 		struct timespec now;
 		int errcount = 0;
@@ -186,7 +198,7 @@ int main(int argc, char **argv) {
 				break;
 			}
 
-			if(!receive_message(&again, &socket_fd, recvbuffer, &addr_remote, &addr_len)) {
+			if(!receive_message(timeout, &again, &poll_fd, &socket_fd, recvbuffer, &addr_remote, &addr_len)) {
 				errcount++;
 				continue;
 			}
@@ -220,23 +232,6 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-void set_timeout(int *socket_fd, struct timeval *timeout) {
-	#ifdef _WIN32
-	// HOX: hope it doesn't overflow on our usage...
-	//int millis = (timeout->tv_sec * 1000) + (timeout->tv_usec / 1000);
-	uint64_t millis = (timeout->tv_sec * (uint64_t)1000) + (timeout->tv_usec / 1000);
-	if (setsockopt(*socket_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&millis, sizeof(millis)) < 0) {
-		perror("ERROR: setting socket options failed.");
-		exit(9);
-	}
-	#else
-	if (setsockopt(*socket_fd, SOL_SOCKET, SO_RCVTIMEO, timeout, sizeof(*timeout)) < 0) {
-		perror("ERROR: setting socket options failed.");
-		exit(9);
-	}
-	#endif
-}
-
 bool absolute_chaos() {
     if ((double)rand() / (double)RAND_MAX < RATE_OF_CHAOS)
 		return true;
@@ -255,18 +250,29 @@ void send_message(int *socket_fd, unsigned char *packet, int packet_length, stru
 	}
 }
 
-bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
+bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
 	// receive
 	if(!*again)
 		printf("Waiting for reply...\n");
 	*again = false;
 
+	int poll_res;
+
+	poll_res = poll(poll_fd, 1, timeout);
+	if(poll_res == -1) {
+		perror("ERROR: problem while polling socket.");
+		return false;
+	}
+	else if(poll_res == 0) {
+		// timeout
+		*again = true;
+		return true;
+	}
+
+	// else
+
 	int num_recv_bytes = recvfrom(*socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)addr_remote, addr_len);
 	if(num_recv_bytes <= -1) {
-		if(errno == EAGAIN) {
-			*again = true;
-			return true;
-		}
 		perror("ERROR: could not receive via recvfrom");
 		return false;
 	}
