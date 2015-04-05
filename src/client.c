@@ -20,7 +20,7 @@
 #include "current_utc_time.h"
 
 #define RECV_BUFFER_SIZE 1000
-#define RATE_OF_CHAOS 0.25
+#define RATE_OF_CHAOS 0.15
 #define MAX_ERROR 20
 #define MAX_RETRY 5
 
@@ -37,6 +37,7 @@ static const char* msg_help = "Usage:\n"
 static const char *msg_input = "Please input next command:";
 
 // declare internal functions
+void send_message(int *socket_fd, unsigned char *packet, int packet_length, struct sockaddr_in *addr_remote, socklen_t *addr_len, char *server, int port);
 bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
 
@@ -158,6 +159,7 @@ int main(int argc, char **argv) {
 
 		// Networking
 
+		/*
 		// set starting time
 		current_utc_time(&(request->start_ts));
 		// send
@@ -167,6 +169,8 @@ int main(int argc, char **argv) {
 			perror("ERROR: could not send packet via sendto");
 			exit(7);
 		}
+		*/
+		send_message(&socket_fd, packet, packet_length, &addr_remote, &addr_len, server, port);
 
 		// set timeout appropriately
 		if(request->service == 4) { // monitor
@@ -203,10 +207,13 @@ int main(int argc, char **argv) {
 				continue;
 			}
 
+			// TODO: monitoring has to have different handling, what if the monitoring message is dropped?
+
 			// if not monitoring, and socket read times out (again == true)
 			if(request->service != 4 && again) {
 				retrycount++;
-				printf("Retrying...\n"); // TODO ACTUALLY SEND THE MESSAGE AGAIN
+				printf("Retrying...\n"); // TODO think about whether send_message should on retry set start time again?
+				send_message(&socket_fd, packet, packet_length, &addr_remote, &addr_len, server, port);
 				continue;
 			}
 
@@ -233,6 +240,18 @@ bool absolute_chaos() {
     if ((double)rand() / (double)RAND_MAX < RATE_OF_CHAOS)
 		return true;
 	return false;
+}
+
+void send_message(int *socket_fd, unsigned char *packet, int packet_length, struct sockaddr_in *addr_remote, socklen_t *addr_len, char *server, int port) {
+	// set starting time
+	current_utc_time(&(request->start_ts));
+	// send
+	//printf("Sending request id: %d to %u port %hu\n", request->id, addr_remote.sin_addr.s_addr, addr_remote.sin_port);
+	printf("Sending request id: %d addr: %s port: %d\n", request->id, server, port);
+	if (sendto(*socket_fd, packet, packet_length, 0, (struct sockaddr *)addr_remote, *addr_len) == -1) {
+		perror("ERROR: could not send packet via sendto");
+		exit(7);
+	}
 }
 
 bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len) {
@@ -271,7 +290,7 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 	ptr++;
 
 	if (id != request->id || type != request->service) {
-		printf("Got reply that didn't match our request. Ignoring it.\n");
+		printf("Got reply that didn't match our request id req: %d repl: %d service req: %d repl: %d. Ignoring it.\n", request->id, id, request->service, type);
 		return false;
 	}
 
@@ -353,41 +372,41 @@ bool receive_message(bool *again, int *socket_fd, char *recvbuffer, struct socka
 			printf("Requested flight not found.\n");
 
 	}
-	
+
 	// Service 5 ::
 	// cancel <flight id> <seats>
 	if (type == 5) {
-	
+
 		int32_t cancelled = unpack_int32(&ptr);
 		if (cancelled > 0) 		  printf("You cancelled %d tickets on this flight.\n", cancelled);
 		else if (cancelled == 0) printf("Insufficient number of tickets booked.\n");
 		else 							  printf("Requested flight not found.\n");
 	}
-	
+
 	// Service 6 ::
 	// destinations <source>
 	if (type == 6) {
-	
+
 		int32_t amount = unpack_int32(&ptr);
 		if (amount == 0) printf("No flights departing from this airport.\n");
 		if (amount < 0)   printf("Source airport not recognized.\n");
 		else {
-		
-		
+
+
 			printf("There are flights departing to following destinations:\n");
-			
+
 			for (int i = 0; i < amount; i++ ) {
 				int tmp_length = unpack_int32(&ptr);
 				char tmp_buffer[tmp_length+1];
 				unpack_str(&ptr, tmp_buffer, tmp_length);
 				printf(" - %s\n", tmp_buffer);
 			}
-			
+
 			printf("\n");
 		}
-	
-	
-	
+
+
+
 	}
 
 	return true;
