@@ -39,13 +39,12 @@ static const char* msg_help = "Usage:\n"
 static const char *msg_input = "Please input next command:";
 
 // declare internal functions
-//void set_timeout(int *socket_fd, struct timeval *timeout);
 void send_message(int *socket_fd, unsigned char *packet, int packet_length, struct sockaddr_in *addr_remote, socklen_t *addr_len, char *server, int port);
 bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *socket_fd, char *recvbuffer, struct sockaddr_in *addr_remote, socklen_t *addr_len);
 int makeargs(char *args, int *argc, char ***aa);
 
 
-static Message *request; 		// contains the message to send
+static Message *request; // contains the message to send
 
 
 int main(int argc, char **argv) {
@@ -100,7 +99,6 @@ int main(int argc, char **argv) {
 	addr_self.sin_family = AF_INET;
 	addr_self.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr_self.sin_port = htons(ownport);
-
 	if (bind(socket_fd, (struct sockaddr *)&addr_self, sizeof(addr_self)) < 0) {
 		perror("ERROR: binding local socket failed");
 		return 5;
@@ -164,7 +162,6 @@ int main(int argc, char **argv) {
 			default: fprintf(stderr, "ERROR: internal control logic command not recognized, this should never happen.\n"); exit(7);
 		}
 
-
 		// construct packet from request message
 		int packet_length;
 		unsigned char *packet = message_to_packet(request, &packet_length);
@@ -222,8 +219,6 @@ int main(int argc, char **argv) {
 			}
 		}
 
-		// TODO: add failures and tolerance, retries and timeouts
-
 		// free used memory
 		packet_destroy(packet);
 		message_destroy(request);
@@ -242,7 +237,6 @@ void send_message(int *socket_fd, unsigned char *packet, int packet_length, stru
 	// set starting time
 	current_utc_time(&(request->start_ts));
 	// send
-	//printf("Sending request id: %d to %u port %hu\n", request->id, addr_remote.sin_addr.s_addr, addr_remote.sin_port);
 	printf("Sending request id: %d addr: %s port: %d\n", request->id, server, port);
 	if (sendto(*socket_fd, packet, packet_length, 0, (struct sockaddr *)addr_remote, *addr_len) == -1) {
 		perror("ERROR: could not send packet via sendto");
@@ -311,7 +305,7 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 		int32_t amount = unpack_int32(&ptr);
 		int32_t flights[amount];
 
-		if 		(amount ==  0) printf("No Route found flying from source to destination.\n");
+		if 	    (amount ==  0) printf("No Route found flying from source to destination.\n");
 		else if (amount == -1) printf("Source airport not recognised.\n");
 		else if (amount == -2) printf("Destination airport not recognised.\n");
 		else if (amount == -3) printf("Both source and destination airports not recognised.\n");
@@ -324,8 +318,7 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 			}
 			printf("\n");
 		}
-
-		}
+	}
 
 	// Service  2 ::
 	// show <id>
@@ -334,7 +327,8 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 		int32_t seats;
 		seats = unpack_int32(&ptr);
 
-		if (seats < 0) printf("Requested flight not found.\n");
+		if (seats < 0)
+			printf("Requested flight not found.\n");
 		else {
 			char year[5];
 			char month[3];
@@ -352,7 +346,6 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 			printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
 			printf("\n\n");
 		}
-
 	}
 
 	// Service  3 ::
@@ -367,7 +360,6 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 			printf("Sorry! This flight is sold out.\n");
 		else
 			printf("Requested flight not found.\n");
-
 	}
 
 	// Service 4 ::
@@ -380,7 +372,6 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 			printf("Update: There are %d seats available on the flight.\n", availability);
 		else
 			printf("Requested flight not found.\n");
-
 	}
 
 	// Service 5 ::
@@ -388,9 +379,12 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 	if (type == 5) {
 
 		int32_t cancelled = unpack_int32(&ptr);
-		if (cancelled > 0) 		  printf("You cancelled %d tickets on this flight.\n", cancelled);
-		else if (cancelled == 0) printf("Insufficient number of tickets booked.\n");
-		else 							  printf("Requested flight not found.\n");
+		if (cancelled > 0)
+			printf("You cancelled %d tickets on this flight.\n", cancelled);
+		else if (cancelled == 0)
+			printf("Insufficient number of tickets booked.\n");
+		else
+			printf("Requested flight not found.\n");
 	}
 
 	// Service 6 ::
@@ -398,11 +392,11 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 	if (type == 6) {
 
 		int32_t amount = unpack_int32(&ptr);
-		if (amount == 0) printf("No flights departing from this airport.\n");
-		if (amount < 0)   printf("Source airport not recognized.\n");
+		if (amount == 0)
+			printf("No flights departing from this airport.\n");
+		else if (amount < 0)
+			printf("Source airport not recognized.\n");
 		else {
-
-
 			printf("There are flights departing to following destinations:\n");
 
 			for (int i = 0; i < amount; i++ ) {
@@ -414,9 +408,6 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 
 			printf("\n");
 		}
-
-
-
 	}
 
 	return true;

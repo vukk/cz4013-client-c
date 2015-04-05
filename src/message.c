@@ -12,8 +12,6 @@
 #include "message.h"
 #include <time.h>
 
-//static int32_t nextmsgnum = 1;	// next message number
-
 Message * message_new() {
 	Message *msg;
 	msg = malloc(sizeof *msg);
