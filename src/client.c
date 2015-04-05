@@ -115,23 +115,7 @@ int main(int argc, char **argv) {
 	// setup poll
 	poll_fd.fd = socket_fd;
 	poll_fd.events = POLLIN;
-
-	// empty udp packet queue just in case
-	timeout = 50;
-	while(true) {
-		poll_res = poll(&poll_fd, 1, timeout);
-		if(poll_res == -1) {
-			perror("ERROR: problem while polling socket.");
-		}
-		else if(poll_res == 0) {
-			// timeout
-			break;
-		}
-		else {
-			if(recvfrom(socket_fd, recvbuffer, RECV_BUFFER_SIZE, 0, (struct sockaddr *)&addr_remote, &addr_len) <= 0)
-				break;
-		}
-	}
+	
 
 	//// Command loop
 
