@@ -310,8 +310,8 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 		int32_t flights[amount];
 
 		if 	    (amount ==  0) printf("No Route found flying from source to destination.\n");
-		else if (amount == -1) printf("Source airport not recognised.\n");
-		else if (amount == -2) printf("Destination airport not recognised.\n");
+		else if (amount == -1) printf("Destination airport not recognised.\n");
+		else if (amount == -2) printf("Source airport not recognised.\n");
 		else if (amount == -3) printf("Both source and destination airports not recognised.\n");
 		else if (amount <  -3) printf("Impossible error occurred.");
 		else {
@@ -320,7 +320,6 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 				flights[i] = unpack_int32(&ptr);
 				printf(" - ID: %d\n", flights[i]);
 			}
-			printf("\n");
 		}
 	}
 
@@ -347,8 +346,7 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 			unpack_str(&ptr, minute, 2);
 
 			float fare = unpack_float(&ptr);
-			printf("Message ID: %d \nType: %d \nSeats: %d \nFlight fare: %.2f \nDate: %s.%s.%s\nTime: %s:%s", id, type, seats, fare, day, month, year, hour, minute);
-			printf("\n\n");
+			printf("Flight details:\n - Seats: %d \n - Flight fare: %.2f sgd\n - Date: %s.%s.%s\n - Time: %s:%s\n", seats, fare, day, month, year, hour, minute);
 		}
 	}
 
@@ -410,10 +408,10 @@ bool receive_message(int timeout, bool *again, struct pollfd *poll_fd, int *sock
 				printf(" - %s\n", tmp_buffer);
 			}
 
-			printf("\n");
 		}
 	}
 
+	printf("\n");
 	return true;
 }
 
