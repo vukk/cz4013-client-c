@@ -22,7 +22,7 @@
 #include "current_utc_time.h"
 
 #define RECV_BUFFER_SIZE 1000
-#define RATE_OF_CHAOS 0
+#define RATE_OF_CHAOS 0.15
 #define MAX_ERROR 20
 #define MAX_RETRY 5
 
